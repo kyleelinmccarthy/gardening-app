@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Card, EmptyState, PageHeader } from "@/components/ui";
+import { Button, Card, PageHeader } from "@/components/ui";
 import { createBed } from "@/domain/defaults";
 import type { Garden } from "@/domain/types";
 import { createId } from "@/lib/id";
@@ -34,9 +34,7 @@ function Planner({ garden }: { garden: Garden }) {
         }
       >
         {garden.beds.length > 0 && <BedList beds={garden.beds} selectedId={selected?.id} onSelect={setSelectedId} />}
-        {garden.beds.length === 0 && !showForm && (
-          <EmptyState icon="🗺️" title="No beds yet" description="Add a bed to start laying out your plants." />
-        )}
+        {garden.beds.length === 0 && <p className="mb-3 text-sm text-muted">No beds yet — add one to start laying out your plants.</p>}
         {showForm && (
           <div className={garden.beds.length > 0 ? "mt-4 rounded-lg border border-border bg-surface-muted/50 p-4" : ""}>
             <h3 className="mb-3 font-semibold">New bed</h3>

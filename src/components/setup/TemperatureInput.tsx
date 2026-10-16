@@ -1,18 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { cToF, fToC } from "@/domain/climate";
 import type { TemperatureUnit } from "@/domain/types";
 import { NumberInput } from "@/components/ui";
-
-export const toDisplayTemp = (f: number, unit: TemperatureUnit): number => {
-  const v = Math.round(unit === "C" ? fToC(f) : f);
-  return v === 0 ? 0 : v;
-};
-
-/** Whole degrees in the user's unit → whole °F (the storage unit). */
-export const fromDisplayTemp = (value: number, unit: TemperatureUnit): number =>
-  Math.round(unit === "C" ? cToF(value) : value);
+import { fromDisplayTemp, toDisplayTemp } from "./temperature";
 
 export interface TemperatureInputProps {
   /** Stored value in °F. */
@@ -28,10 +19,11 @@ export interface TemperatureInputProps {
  * Keeps the raw typed text locally so partial input ("-", "") never fights the user.
  */
 export function TemperatureInput({ value, onChange, unit, disabled }: TemperatureInputProps) {
-  const [text, setText] = useState<string | null>(null);
-  const typed = text === null || text.trim() === "" ? Number.NaN : Number(text);
-  const inSync = Number.isFinite(typed) && fromDisplayTemp(typed, unit) === value;
-  const shown = inSync ? (text as string) : String(toDisplayTemp(value, unit));
+  // The typed text is only shown while it still describes the current value
+  // (and unit); external changes (e.g. picking a zone) replace it.
+  const [draft, setDraft] = useState<{ text: string; forValue: number; forUnit: TemperatureUnit } | null>(null);
+  const shown =
+    draft && draft.forValue === value && draft.forUnit === unit ? draft.text : String(toDisplayTemp(value, unit));
 
   return (
     <NumberInput
@@ -39,10 +31,12 @@ export function TemperatureInput({ value, onChange, unit, disabled }: Temperatur
       disabled={disabled}
       step={1}
       onChange={(e) => {
-        const next = e.target.value;
-        setText(next);
-        const n = Number(next);
-        if (next.trim() !== "" && Number.isFinite(n)) onChange(fromDisplayTemp(n, unit));
+        const text = e.target.value;
+        const n = Number(text);
+        const valid = text.trim() !== "" && Number.isFinite(n);
+        const next = valid ? fromDisplayTemp(n, unit) : value;
+        setDraft({ text, forValue: next, forUnit: unit });
+        if (valid) onChange(next);
       }}
     />
   );
