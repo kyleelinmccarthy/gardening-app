@@ -1,7 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { MAX_BED_DIMENSION } from "@/domain/constants";
+import { todayIso } from "@/domain/dates";
 import { createDefaultProfile } from "@/domain/defaults";
 import type { AppData, Garden } from "@/domain/types";
-import { createEmptyAppData } from "@/storage/schema";
+import { createEmptyAppData, parseAppData } from "@/storage/schema";
 import { makeAppData, makeBed, makeGarden, makePlant } from "@/test/fixtures";
 import { appReducer, type AppAction } from "./appReducer";
 
@@ -475,5 +479,234 @@ describe("immutability", () => {
     expect(next.gardens[0]).not.toBe(state.gardens[0]);
     expect(next.gardens[1]).toBe(state.gardens[1]);
     expect(state.gardens[0].journal).toHaveLength(0);
+  });
+});
+
+describe("patch actions ignore undefined values", () => {
+  it("bed/update keeps existing fields when a change is undefined", () => {
+    const state = makeAppData([makeGarden({ beds: [makeBed({ sun: "full-shade" })] })]);
+    const next = run(state, {
+      type: "bed/update",
+      gardenId: "garden-1",
+      bedId: "bed-1",
+      changes: { sun: undefined, name: "Renamed" },
+    });
+    expect(gardenOf(next).beds[0].sun).toBe("full-shade");
+    expect(gardenOf(next).beds[0].name).toBe("Renamed");
+  });
+
+  it("settings/update keeps the unit when the change is undefined", () => {
+    const next = run(makeAppData(), { type: "settings/update", changes: { temperatureUnit: undefined } });
+    expect(next.settings.temperatureUnit).toBe("F");
+  });
+
+  it("garden/update ignores undefined profile fields", () => {
+    const next = run(makeAppData(), {
+      type: "garden/update",
+      gardenId: "garden-1",
+      profile: { weeklyHours: undefined, hasChildren: true },
+    });
+    expect(typeof gardenOf(next).profile.weeklyHours).toBe("number");
+    expect(gardenOf(next).profile.hasChildren).toBe(true);
+  });
+
+  it("planting, reminder and journal updates ignore undefined values", () => {
+    const state = makeAppData([
+      makeGarden({
+        plantings: [planting()],
+        reminders: [{ id: "r1", title: "Feed", dueDate: "2026-05-01", done: false }],
+        journal: [{ id: "j1", date: "2026-05-01", title: "T", text: "x" }],
+      }),
+    ]);
+    let next = run(state, { type: "planting/update", gardenId: "garden-1", plantingId: "pl-1", changes: { status: undefined, notes: "n" } });
+    expect(gardenOf(next).plantings[0]).toMatchObject({ status: "growing", notes: "n" });
+    next = run(state, { type: "reminder/update", gardenId: "garden-1", reminderId: "r1", changes: { dueDate: undefined, done: true } });
+    expect(gardenOf(next).reminders[0]).toMatchObject({ dueDate: "2026-05-01", done: true });
+    next = run(state, { type: "journal/update", gardenId: "garden-1", entryId: "j1", changes: { text: undefined } });
+    expect(gardenOf(next).journal[0].text).toBe("x");
+  });
+});
+
+describe("bed/update dimension validation", () => {
+  const update = (changes: Record<string, unknown>) =>
+    gardenOf(
+      run(makeAppData([makeGarden({ beds: [makeBed({ columns: 4, rows: 4 })] })]), {
+        type: "bed/update",
+        gardenId: "garden-1",
+        bedId: "bed-1",
+        changes: changes as never,
+      }),
+    ).beds[0];
+
+  it("clamps dimensions to 1..MAX_BED_DIMENSION", () => {
+    expect(update({ columns: 0 }).columns).toBe(1);
+    expect(update({ rows: -5 }).rows).toBe(1);
+    expect(update({ columns: 999 }).columns).toBe(MAX_BED_DIMENSION);
+  });
+
+  it("rounds fractional dimensions to whole numbers", () => {
+    expect(update({ columns: 2.5 }).columns).toBe(3);
+  });
+
+  it("ignores non-numeric dimensions", () => {
+    expect(update({ columns: Number.NaN }).columns).toBe(4);
+    expect(update({ rows: "7" }).rows).toBe(4);
+  });
+
+  it("ignores a non-positive cell size", () => {
+    expect(update({ cellSizeInches: 0 }).cellSizeInches).toBe(12);
+    expect(update({ cellSizeInches: -3 }).cellSizeInches).toBe(12);
+    expect(update({ cellSizeInches: 6 }).cellSizeInches).toBe(6);
+  });
+
+  it("drops placements that no longer fit after clamping", () => {
+    const state = makeAppData([
+      makeGarden({ beds: [makeBed({ columns: 3, rows: 3, placements: [{ plantId: "p", x: 2, y: 2 }] })] }),
+    ]);
+    const next = run(state, { type: "bed/update", gardenId: "garden-1", bedId: "bed-1", changes: { columns: 0 } });
+    expect(gardenOf(next).beds[0].placements).toEqual([]);
+  });
+
+  it("bed/add normalises out-of-range dimensions and cell size", () => {
+    const next = run(makeAppData(), {
+      type: "bed/add",
+      gardenId: "garden-1",
+      bed: makeBed({ id: "wild", columns: 0, rows: 500, cellSizeInches: 0 }),
+    });
+    expect(gardenOf(next).beds[0]).toMatchObject({ columns: 1, rows: MAX_BED_DIMENSION, cellSizeInches: 12 });
+  });
+});
+
+describe("bed/update kind change", () => {
+  const state = () =>
+    makeAppData([
+      makeGarden({
+        beds: [makeBed({ id: "bed-1", kind: "raised-bed" }), makeBed({ id: "bed-2", kind: "raised-bed" })],
+        plantings: [
+          planting({ id: "a", bedId: "bed-1", inContainer: false }),
+          planting({ id: "b", bedId: "bed-2", inContainer: false }),
+          planting({ id: "c", plantId: "x", bedId: undefined, inContainer: false }),
+        ],
+      }),
+    ]);
+
+  it("marks the bed's plantings as in a container when it becomes a container-like kind", () => {
+    for (const kind of ["container", "windowsill", "shelf"] as const) {
+      const next = run(state(), { type: "bed/update", gardenId: "garden-1", bedId: "bed-1", changes: { kind } });
+      const byId = Object.fromEntries(gardenOf(next).plantings.map((p) => [p.id, p.inContainer]));
+      expect(byId).toEqual({ a: true, b: false, c: false });
+    }
+  });
+
+  it("clears inContainer when the bed becomes a ground bed", () => {
+    const start = run(state(), { type: "bed/update", gardenId: "garden-1", bedId: "bed-1", changes: { kind: "container" } });
+    const next = run(start, { type: "bed/update", gardenId: "garden-1", bedId: "bed-1", changes: { kind: "in-ground" } });
+    expect(gardenOf(next).plantings.find((p) => p.id === "a")!.inContainer).toBe(false);
+  });
+
+  it("leaves plantings untouched when the kind does not change", () => {
+    const before = state();
+    const next = run(before, { type: "bed/update", gardenId: "garden-1", bedId: "bed-1", changes: { name: "X" } });
+    expect(gardenOf(next).plantings).toEqual(gardenOf(before).plantings);
+  });
+});
+
+describe("local dates", () => {
+  const originalTz = process.env.TZ;
+  afterEach(() => {
+    vi.useRealTimers();
+    if (originalTz === undefined) delete process.env.TZ;
+    else process.env.TZ = originalTz;
+  });
+
+  it("bed/place stamps the LOCAL date (not UTC) on an auto-created planting", () => {
+    // A US evening: 22:30 local on the 10th is already the 11th in UTC.
+    process.env.TZ = "America/Los_Angeles";
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 2, 10, 22, 30));
+    expect(new Date().toISOString().slice(0, 10)).toBe("2026-03-11");
+    const next = appReducer(makeAppData([makeGarden({ beds: [makeBed()] })]), {
+      type: "bed/place",
+      gardenId: "garden-1",
+      bedId: "bed-1",
+      plantId: "test-tomato",
+      x: 0,
+      y: 0,
+    });
+    expect(gardenOf(next).plantings[0].plantedOn).toBe(todayIso());
+    expect(gardenOf(next).plantings[0].plantedOn).toBe("2026-03-10");
+  });
+});
+
+describe("data/replace sanitising", () => {
+  it("drops out-of-bounds placements and repairs a dangling activeGardenId", () => {
+    const dirty = makeAppData(
+      [makeGarden({ beds: [makeBed({ columns: 2, rows: 2, placements: [{ plantId: "p", x: 7, y: 7 }] })] })],
+      { activeGardenId: "ghost" },
+    );
+    const next = run(makeAppData(), { type: "data/replace", data: dirty });
+    expect(next.activeGardenId).toBe("garden-1");
+    expect(gardenOf(next).beds[0].placements).toEqual([]);
+  });
+});
+
+describe("persistence safety", () => {
+  const g = "garden-1";
+  const rich = (): AppData =>
+    makeAppData(
+      [
+        makeGarden({
+          beds: [makeBed({ placements: [{ plantId: "test-tomato", x: 0, y: 0 }] })],
+          plantings: [planting()],
+          careLog: [{ id: "c1", type: "water", date: "2026-04-21" }],
+          reminders: [{ id: "r1", title: "Feed", dueDate: "2026-05-01", done: false }],
+          journal: [{ id: "j1", date: "2026-04-22", title: "T", text: "x" }],
+        }),
+      ],
+      { customPlants: [makePlant({ id: "mine" })] },
+    );
+
+  const actions: AppAction[] = [
+    { type: "garden/create", garden: makeGarden({ id: "g2" }) },
+    { type: "garden/update", gardenId: g, name: "N", profile: { weeklyHours: undefined, hasChildren: true } },
+    { type: "garden/delete", gardenId: g },
+    { type: "garden/setActive", gardenId: g },
+    { type: "bed/add", gardenId: g, bed: makeBed({ id: "b2", columns: 0, rows: 99, cellSizeInches: -1 }) },
+    { type: "bed/update", gardenId: g, bedId: "bed-1", changes: { sun: undefined, columns: 0, rows: 2.5, cellSizeInches: 0 } },
+    { type: "bed/update", gardenId: g, bedId: "bed-1", changes: { kind: "windowsill", columns: 3 } },
+    { type: "bed/delete", gardenId: g, bedId: "bed-1" },
+    { type: "bed/place", gardenId: g, bedId: "bed-1", plantId: "other", x: 1, y: 1 },
+    { type: "bed/clearCell", gardenId: g, bedId: "bed-1", x: 0, y: 0 },
+    { type: "bed/clearAll", gardenId: g, bedId: "bed-1" },
+    { type: "planting/add", gardenId: g, planting: planting({ id: "pl-2" }) },
+    { type: "planting/update", gardenId: g, plantingId: "pl-1", changes: { status: undefined, quantity: undefined, notes: "x" } },
+    { type: "planting/delete", gardenId: g, plantingId: "pl-1" },
+    { type: "care/log", gardenId: g, entry: { id: "c2", type: "prune", date: "2026-04-23" } },
+    { type: "care/deleteLog", gardenId: g, entryId: "c1" },
+    { type: "reminder/add", gardenId: g, reminder: { id: "r2", title: "t", dueDate: "2026-06-01", done: false } },
+    { type: "reminder/update", gardenId: g, reminderId: "r1", changes: { dueDate: undefined, done: true } },
+    { type: "reminder/delete", gardenId: g, reminderId: "r1" },
+    { type: "journal/add", gardenId: g, entry: { id: "j2", date: "2026-04-24", title: "t", text: "x" } },
+    { type: "journal/update", gardenId: g, entryId: "j1", changes: { date: undefined, title: undefined } },
+    { type: "journal/delete", gardenId: g, entryId: "j1" },
+    { type: "customPlant/upsert", plant: makePlant({ id: "mine2" }) },
+    { type: "customPlant/delete", plantId: "mine" },
+    { type: "settings/update", changes: { temperatureUnit: undefined } },
+    { type: "settings/update", changes: { temperatureUnit: "C" } },
+    { type: "data/replace", data: createEmptyAppData() },
+  ];
+
+  it.each(actions.map((a, i) => [`${i}: ${a.type}`, a] as const))("%s keeps state parseable after a JSON round-trip", (_label, action) => {
+    const next = run(rich(), action);
+    const result = parseAppData(JSON.parse(JSON.stringify(next)));
+    expect(result.ok, result.ok ? "" : result.error).toBe(true);
+  });
+
+  it("covers every action type", () => {
+    const covered = new Set(actions.map((a) => a.type));
+    const source = readFileSync(resolve(__dirname, "appReducer.ts"), "utf8");
+    const declared = [...source.matchAll(/type: "([a-zA-Z]+\/[a-zA-Z]+)"/g)].map((m) => m[1]);
+    expect(declared.length).toBeGreaterThan(20);
+    for (const type of new Set(declared)) expect(covered, `missing ${type}`).toContain(type);
   });
 });

@@ -53,4 +53,17 @@ describe("Tabs", () => {
     expect(onChange).toHaveBeenCalledWith("three");
     expect(screen.getByRole("tabpanel")).toHaveTextContent("First panel");
   });
+
+  it("falls back to the first tab when a controlled value matches no tab", () => {
+    render(<Tabs tabs={tabs} label="Sections" value="missing" />);
+    expect(screen.getByRole("tab", { name: "One" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "One" })).toHaveAttribute("tabindex", "0");
+    expect(screen.getByRole("tab", { name: "Two" })).toHaveAttribute("tabindex", "-1");
+    expect(screen.getByRole("tabpanel")).toHaveTextContent("First panel");
+  });
+
+  it("falls back to the first tab when defaultValue matches no tab", () => {
+    render(<Tabs tabs={tabs} label="Sections" defaultValue="nope" />);
+    expect(screen.getByRole("tab", { name: "One" })).toHaveAttribute("tabindex", "0");
+  });
 });

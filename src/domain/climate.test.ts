@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cToF, climateFromZone, fToC, formatTemperature, zoneForMinTemp } from "./climate";
+import { cToF, climateFromZone, fToC, formatTemperature, frostFreeDays } from "./climate";
 import type { ZoneInfo } from "./types";
 
 const zones: ZoneInfo[] = [
@@ -44,27 +44,19 @@ describe("formatTemperature", () => {
   });
 });
 
-describe("zoneForMinTemp", () => {
-  it("finds the zone whose range contains the temperature", () => {
-    expect(zoneForMinTemp(-5, zones)).toBe(6);
-    expect(zoneForMinTemp(5, zones)).toBe(7);
+describe("frostFreeDays", () => {
+  it("returns 365 when either frost date is null", () => {
+    expect(frostFreeDays(null, "10-15")).toBe(365);
+    expect(frostFreeDays("04-30", null)).toBe(365);
+    expect(frostFreeDays(null, null)).toBe(365);
   });
-
-  it("treats the lower bound as inclusive (boundary goes to the warmer zone)", () => {
-    expect(zoneForMinTemp(0, zones)).toBe(7);
+  it("counts days between last and first frost (non-leap)", () => {
+    expect(frostFreeDays("01-01", "01-31")).toBe(30);
+    expect(frostFreeDays("04-30", "10-15")).toBe(168);
+    expect(frostFreeDays("02-28", "03-01")).toBe(1);
   });
-
-  it("clamps outside the known range", () => {
-    expect(zoneForMinTemp(-80, zones)).toBe(3);
-    expect(zoneForMinTemp(90, zones)).toBe(11);
-  });
-
-  it("handles gaps between zones by picking the nearest colder zone", () => {
-    expect(zoneForMinTemp(20, zones)).toBe(7);
-  });
-
-  it("throws with no zones", () => {
-    expect(() => zoneForMinTemp(10, [])).toThrow();
+  it("wraps around the year if first frost precedes last frost", () => {
+    expect(frostFreeDays("12-01", "01-01")).toBe(31);
   });
 });
 

@@ -384,7 +384,7 @@ export const HERBS: Plant[] = [
       rabbit: "moderate",
       human: "non-toxic",
       notes:
-        "All parts contain organosulfur compounds (allium family). In cats and dogs they damage red blood cells, causing vomiting, diarrhoea, lethargy, pale gums and anaemia; cats are most sensitive. Culinary use is safe for people.",
+        "All parts contain organosulfur compounds (allium family). In cats and dogs they damage red blood cells, causing vomiting, diarrhoea, lethargy, pale gums and anaemia; cats are more sensitive than dogs, and effects depend on the dose eaten. Culinary use is safe for people.",
     },
     allergens: [],
     allergyNotes: "People allergic to onions or garlic may react to chives.",

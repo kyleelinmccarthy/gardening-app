@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { ZONES } from "@/data/zones";
+import { climateFromZone } from "./climate";
 import { createBed, createDefaultProfile, createGarden } from "./defaults";
 
 describe("createDefaultProfile", () => {
@@ -8,9 +10,9 @@ describe("createDefaultProfile", () => {
     expect(p.climate).toEqual({
       hardinessZone: 7,
       lastFrost: "04-15",
-      firstFrost: "10-15",
-      summerHighF: 85,
-      winterLowF: 5,
+      firstFrost: "10-25",
+      summerHighF: 88,
+      winterLowF: 0,
       humidity: "average",
     });
     expect(p.indoor).toEqual({ light: "bright-indirect", averageTempF: 70, humidity: "average" });
@@ -26,6 +28,10 @@ describe("createDefaultProfile", () => {
     expect(p.allergies).toEqual([]);
     expect(p.hasChildren).toBe(false);
     expect(p.weeklyHours).toBe(3);
+  });
+
+  it("derives its climate from the zone data, so it matches what the setup wizard picks for zone 7", () => {
+    expect(createDefaultProfile().climate).toEqual(climateFromZone(7, ZONES));
   });
 
   it("applies shallow overrides", () => {

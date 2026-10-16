@@ -28,7 +28,9 @@ export interface TabsProps {
 export function Tabs({ tabs, label, value, defaultValue, onChange }: TabsProps) {
   const baseId = useId();
   const [inner, setInner] = useState(defaultValue ?? tabs[0]?.id);
-  const selected = value ?? inner;
+  // A value (controlled or stale) that matches no tab resolves to the first tab, so one tab is always tabbable.
+  const requested = value ?? inner;
+  const selected = tabs.some((t) => t.id === requested) ? requested : tabs[0]?.id;
   const refs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   function select(id: string) {

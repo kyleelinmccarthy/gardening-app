@@ -31,7 +31,16 @@ export interface FieldProps {
   children: ReactNode;
 }
 
-/** Label + control + hint/error, wired together via generated ids. */
+/**
+ * Label + control + hint/error, wired together via generated ids.
+ *
+ * A `Field` wraps exactly ONE form control: the label's `htmlFor`, the hint and
+ * the error all point at that single control's id, and every control rendered
+ * inside reads the same id. For several related controls (radio/checkbox
+ * groups, a min/max pair) use one `Field` per control, or a `fieldset` with a
+ * `legend` for the group. A `Checkbox` brings its own label, so it goes
+ * outside a `Field`.
+ */
 export function Field({ label, hint, error, className, children }: FieldProps) {
   const id = useId();
   const hintId = hint ? `${id}-hint` : undefined;

@@ -132,5 +132,44 @@ describe("BUILTIN_PLANTS integrity", () => {
     ).toEqual([]);
   });
 
-  // Note: companion/antagonist symmetry is intentionally NOT required.
+  // Note: companion/antagonist symmetry is intentionally NOT required in the data;
+  // createPlantCatalog normalizes the relations for consumers.
+});
+
+describe("BUILTIN_PLANTS toxicity calibration", () => {
+  const get = (id: string) => BUILTIN_PLANTS.find((p) => p.id === id)!;
+  const PET_SPECIES = ["cat", "dog", "bird", "rabbit"] as const;
+
+  it("rates calcium-oxalate aroids mild for small pets (irritating, self-limiting: a warning, not a blocker)", () => {
+    for (const id of ["pothos", "peace-lily", "monstera", "zz-plant", "heartleaf-philodendron", "chinese-evergreen"]) {
+      for (const pet of PET_SPECIES) expect(get(id).toxicity[pet], `${id} ${pet}`).toBe("mild");
+      expect(get(id).toxicity.notes, id).toMatch(/out of reach/i);
+    }
+  });
+
+  it("rates dracaena mild for cats and dogs (ASPCA: vomiting, dilated pupils)", () => {
+    expect(get("dracaena").toxicity.cat).toBe("mild");
+    expect(get("dracaena").toxicity.dog).toBe("mild");
+  });
+
+  it("keeps english ivy moderate (saponins: vomiting, diarrhea, hypersalivation)", () => {
+    expect(get("english-ivy").toxicity.cat).toBe("moderate");
+  });
+
+  it("rates edible crops by the part people handle and eat, not the toxic foliage", () => {
+    const edible = ["tomato", "cherry-tomato", "eggplant", "hot-pepper", "potato", "bush-bean", "pole-bean", "asparagus", "dwarf-apple", "fig"];
+    for (const id of edible) expect(["non-toxic", "mild"], id).toContain(get(id).toxicity.human);
+    expect(get("rhubarb").toxicity.human).toBe("moderate");
+    expect(get("borage").toxicity.human).toBe("mild");
+  });
+
+  it("rates every allium moderate for cats and dogs, noting cats are more sensitive", () => {
+    const alliums = BUILTIN_PLANTS.filter((p) => p.scientificName.startsWith("Allium"));
+    expect(alliums.map((p) => p.id).sort()).toEqual(["chives", "garlic", "leek", "onion"]);
+    for (const p of alliums) {
+      expect(p.toxicity.cat, p.id).toBe("moderate");
+      expect(p.toxicity.dog, p.id).toBe("moderate");
+      expect(p.toxicity.notes, p.id).toMatch(/cats/i);
+    }
+  });
 });

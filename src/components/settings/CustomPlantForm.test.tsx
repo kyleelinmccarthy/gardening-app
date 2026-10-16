@@ -106,11 +106,16 @@ describe("CustomPlantForm", () => {
   it("selects companions from the catalog with a filter", async () => {
     const { user, onSave } = setup();
     await user.type(screen.getByLabelText("Name"), "Marigold");
-    const companions = screen.getByRole("group", { name: /Companion plants/ });
+    const companions = screen.getByRole("group", { name: "Companion plants" });
+    expect(within(companions).getByText("None selected")).toBeInTheDocument();
+    await user.click(within(companions).getByRole("button", { name: "Choose Companion plants" }));
     await user.type(within(companions).getByLabelText("Filter Companion plants"), "bas");
     expect(within(companions).queryByRole("checkbox", { name: "Tomato" })).not.toBeInTheDocument();
     await user.click(within(companions).getByRole("checkbox", { name: "Basil" }));
-    const antagonists = screen.getByRole("group", { name: /Antagonist plants/ });
+    expect(within(companions).getByText("Basil", { selector: "p" })).toBeInTheDocument();
+
+    const antagonists = screen.getByRole("group", { name: "Antagonist plants" });
+    await user.click(within(antagonists).getByRole("button", { name: "Choose Antagonist plants" }));
     await user.click(within(antagonists).getByRole("checkbox", { name: "Fennel" }));
     await user.click(screen.getByRole("button", { name: "Add plant" }));
     expect(onSave.mock.calls[0][0]).toMatchObject({ companions: ["basil"], antagonists: ["fennel"] });
@@ -119,24 +124,28 @@ describe("CustomPlantForm", () => {
   it("rejects a plant listed as both companion and antagonist", async () => {
     const { user, onSave } = setup();
     await user.type(screen.getByLabelText("Name"), "Marigold");
-    await user.click(within(screen.getByRole("group", { name: /Companion plants/ })).getByRole("checkbox", { name: "Basil" }));
-    await user.click(within(screen.getByRole("group", { name: /Antagonist plants/ })).getByRole("checkbox", { name: "Basil" }));
+    for (const label of ["Companion plants", "Antagonist plants"]) {
+      const group = screen.getByRole("group", { name: label });
+      await user.click(within(group).getByRole("button", { name: `Choose ${label}` }));
+      await user.click(within(group).getByRole("checkbox", { name: "Basil" }));
+    }
     await user.click(screen.getByRole("button", { name: "Add plant" }));
     expect(onSave).not.toHaveBeenCalled();
     expect(screen.getByText(/both a companion and an antagonist/)).toBeInTheDocument();
   });
 
   it("pre-fills when editing, keeps the id, and excludes the plant from its own companion list", async () => {
-    const existing = makePlant({ id: "custom-basil-abc123", name: "Basil", custom: true, careTips: ["Pinch"] });
+    const existing = makePlant({ id: "tomato", name: "Tomato", custom: true, careTips: ["Pinch"] });
     const { user, onSave } = setup({ initial: existing });
-    expect(screen.getByLabelText("Name")).toHaveValue("Basil");
+    expect(screen.getByLabelText("Name")).toHaveValue("Tomato");
     expect(screen.getByLabelText("Care tips")).toHaveValue("Pinch");
-    const companions = screen.getByRole("group", { name: /Companion plants/ });
-    expect(within(companions).getAllByRole("checkbox")).toHaveLength(3); // catalog list is passed as-is (ids differ)
+    const companions = screen.getByRole("group", { name: "Companion plants" });
+    await user.click(within(companions).getByRole("button", { name: "Choose Companion plants" }));
+    expect(within(companions).getAllByRole("checkbox").map((c) => (c as HTMLInputElement).labels?.[0]?.textContent)).toEqual(["Basil", "Fennel"]);
     await user.clear(screen.getByLabelText("Name"));
-    await user.type(screen.getByLabelText("Name"), "Sweet Basil");
+    await user.type(screen.getByLabelText("Name"), "Sweet Tomato");
     await user.click(screen.getByRole("button", { name: "Save changes" }));
-    expect(onSave.mock.calls[0][0]).toMatchObject({ id: "custom-basil-abc123", name: "Sweet Basil", careTips: ["Pinch"] });
+    expect(onSave.mock.calls[0][0]).toMatchObject({ id: "tomato", name: "Sweet Tomato", careTips: ["Pinch"] });
   });
 
   it("calls onCancel", async () => {

@@ -6,6 +6,7 @@ export const metadata: Metadata = { title: "Page not found" };
 export default function NotFound() {
   return (
     <EmptyState
+      headingLevel="h1"
       icon="🥀"
       title="This page has wilted"
       description="We could not find what you were looking for. It may have moved, or the link might be mistyped."

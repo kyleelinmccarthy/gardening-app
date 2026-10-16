@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ZONES } from "@/data/zones";
+import { climateFromZone } from "@/domain/climate";
 import { createDefaultProfile } from "@/domain/defaults";
 import {
   SETUP_STEPS,
@@ -60,7 +61,7 @@ describe("setupReducer", () => {
     expect(next.lastFrost).toBe(zone5.lastFrost);
     expect(next.firstFrost).toBe(zone5.firstFrost);
     expect(next.winterLowF).toBe(zone5.minTempF);
-    expect(next.summerHighF).toBe(83);
+    expect(next.summerHighF).toBe(climateFromZone(5, ZONES).summerHighF);
     expect(next.frostFree).toBe(false);
   });
 

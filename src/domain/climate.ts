@@ -1,8 +1,13 @@
+import { diffDays, monthDayToIso } from "./dates";
 import type { ClimateProfile, TemperatureUnit, ZoneInfo } from "./types";
 
 /** Estimated summer high (°F) at zone 0; each zone step adds {@link SUMMER_HIGH_PER_ZONE}. */
 const SUMMER_HIGH_BASE_F = 70;
 const SUMMER_HIGH_PER_ZONE_F = 2.5;
+
+/** A non-leap year, so frost-date arithmetic never depends on leap days. */
+const REFERENCE_YEAR = 2025;
+const DAYS_IN_YEAR = 365;
 
 export function fToC(f: number): number {
   return ((f - 32) * 5) / 9;
@@ -24,15 +29,14 @@ export function formatTemperature(f: number, unit: TemperatureUnit): string {
 }
 
 /**
- * Maps an average annual extreme minimum (°F) to a hardiness zone: the warmest
- * zone whose lower bound is at or below the temperature (coldest zone if none).
+ * Days between the last spring frost and first fall frost ("MM-DD", non-leap
+ * year). Returns 365 when either date is null (frost-free climate); wraps
+ * around the new year if the first frost precedes the last.
  */
-export function zoneForMinTemp(minTempF: number, zones: readonly ZoneInfo[]): number {
-  if (zones.length === 0) throw new Error("No hardiness zones provided");
-  const sorted = [...zones].sort((a, b) => a.minTempF - b.minTempF);
-  let match = sorted[0];
-  for (const z of sorted) if (z.minTempF <= minTempF) match = z;
-  return match.zone;
+export function frostFreeDays(lastFrost: string | null, firstFrost: string | null): number {
+  if (lastFrost === null || firstFrost === null) return DAYS_IN_YEAR;
+  const diff = diffDays(monthDayToIso(lastFrost, REFERENCE_YEAR), monthDayToIso(firstFrost, REFERENCE_YEAR));
+  return diff >= 0 ? diff : diff + DAYS_IN_YEAR;
 }
 
 function nearestZone(zone: number, zones: readonly ZoneInfo[]): ZoneInfo {

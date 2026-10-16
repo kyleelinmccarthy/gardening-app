@@ -1,9 +1,10 @@
 import { act, render, renderHook, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { renderToString } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { createLocalRepository } from "@/storage/repository";
+import { createLocalRepository, type AppDataRepository } from "@/storage/repository";
 import { createEmptyAppData } from "@/storage/schema";
-import { createMemoryStorage } from "@/storage/storage";
+import { createMemoryStorage, type KeyValueStorage } from "@/storage/storage";
 import { makeAppData, makeGarden, makePlant } from "@/test/fixtures";
 import { AppDataProvider, useActiveGarden, useAppData, useCatalog } from "./AppDataProvider";
 
@@ -134,10 +135,99 @@ describe("AppDataProvider", () => {
     expect(window.localStorage.getItem("garden-planner:v1")).toContain("Default repo");
   });
 
+  it("ignores storage events for unrelated keys", () => {
+    const { wrapper, repository } = setup();
+    renderHook(() => useAppData(), { wrapper });
+    const load = vi.spyOn(repository, "loadWithStatus");
+    act(() => {
+      window.dispatchEvent(new StorageEvent("storage", { key: "some-other-app" }));
+    });
+    expect(load).not.toHaveBeenCalled();
+  });
+
+  it("reloads when storage is cleared (event key is null)", () => {
+    const { wrapper, repository } = setup();
+    const { result } = renderHook(() => useAppData(), { wrapper });
+    repository.save(makeAppData([makeGarden({ name: "After clear" })]));
+    act(() => {
+      window.dispatchEvent(new StorageEvent("storage", { key: null }));
+    });
+    expect(result.current.activeGarden?.name).toBe("After clear");
+  });
+
+  it("does not touch storage while rendering (server render is side-effect free)", () => {
+    const setItem = vi.spyOn(Storage.prototype, "setItem");
+    const getItem = vi.spyOn(Storage.prototype, "getItem");
+    const html = renderToString(
+      <AppDataProvider>
+        <p>ssr</p>
+      </AppDataProvider>,
+    );
+    expect(html).toContain("ssr");
+    expect(setItem).not.toHaveBeenCalled();
+    expect(getItem).not.toHaveBeenCalled();
+    setItem.mockRestore();
+    getItem.mockRestore();
+  });
+
   it("renders its children", () => {
     const { wrapper } = setup();
     render(<div>hello</div>, { wrapper });
     expect(screen.getByText("hello")).toBeInTheDocument();
+  });
+});
+
+describe("storageStatus", () => {
+  const providerFor = (repository: AppDataRepository) =>
+    function Wrapper({ children }: { children: ReactNode }) {
+      return <AppDataProvider repository={repository}>{children}</AppDataProvider>;
+    };
+
+  it("is ok for readable saved data and empty for a fresh browser", () => {
+    const { wrapper } = setup(makeAppData([makeGarden()]));
+    expect(renderHook(() => useAppData(), { wrapper }).result.current.storageStatus).toBe("ok");
+
+    const fresh = providerFor(createLocalRepository(createMemoryStorage()));
+    expect(renderHook(() => useAppData(), { wrapper: fresh }).result.current.storageStatus).toBe("empty");
+  });
+
+  it("is corrupt for unreadable data, and the first edit still saves (a backup was kept)", () => {
+    const storage = createMemoryStorage();
+    storage.setItem("garden-planner:v1", "{bad");
+    const repository = createLocalRepository(storage);
+    const { result } = renderHook(() => useAppData(), { wrapper: providerFor(repository) });
+    expect(result.current.storageStatus).toBe("corrupt");
+    act(() => result.current.dispatch({ type: "garden/create", garden: makeGarden({ name: "New" }) }));
+    expect(repository.load().gardens[0].name).toBe("New");
+    const keys = Array.from({ length: storage.length! }, (_, i) => storage.key!(i)!);
+    expect(keys.some((k) => k.startsWith("garden-planner:v1:corrupt-backup:"))).toBe(true);
+  });
+
+  it("is unavailable when reading throws, and nothing is saved", () => {
+    const setItem = vi.fn();
+    const storage: KeyValueStorage = {
+      getItem: () => {
+        throw new Error("blocked");
+      },
+      setItem,
+      removeItem: () => {},
+    };
+    const { result } = renderHook(() => useAppData(), { wrapper: providerFor(createLocalRepository(storage)) });
+    expect(result.current.storageStatus).toBe("unavailable");
+    act(() => result.current.dispatch({ type: "garden/create", garden: makeGarden() }));
+    expect(result.current.data.gardens).toHaveLength(1);
+    expect(setItem).not.toHaveBeenCalled();
+  });
+
+  it("is unavailable with the default repository when the browser has no usable storage", () => {
+    const spy = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    const { result } = renderHook(() => useAppData(), {
+      wrapper: ({ children }: { children: ReactNode }) => <AppDataProvider>{children}</AppDataProvider>,
+    });
+    expect(result.current.storageStatus).toBe("unavailable");
+    spy.mockRestore();
   });
 });
 

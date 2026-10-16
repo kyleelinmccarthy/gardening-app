@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   evaluatePlant,
-  frostFreeDays,
   recommendPlants,
   SCORE_CONFIG,
   DEFAULT_RULES,
@@ -21,21 +20,6 @@ const toxic = (overrides: Partial<Toxicity>): Toxicity => ({
   rabbit: "non-toxic",
   human: "non-toxic",
   ...overrides,
-});
-
-describe("frostFreeDays", () => {
-  it("returns 365 when either frost date is null", () => {
-    expect(frostFreeDays(null, "10-15")).toBe(365);
-    expect(frostFreeDays("04-30", null)).toBe(365);
-    expect(frostFreeDays(null, null)).toBe(365);
-  });
-  it("counts days between last and first frost (non-leap)", () => {
-    expect(frostFreeDays("01-01", "01-31")).toBe(30);
-    expect(frostFreeDays("04-30", "10-15")).toBe(168);
-  });
-  it("wraps around the year if first frost precedes last frost", () => {
-    expect(frostFreeDays("12-01", "01-01")).toBe(31);
-  });
 });
 
 describe("evaluatePlant: setting", () => {
@@ -128,6 +112,15 @@ describe("evaluatePlant: hardiness zone", () => {
     );
     expect(find(rec.reasons, "zone")).toHaveLength(0);
   });
+  it("does not evaluate zone for biennials grown as annuals (carrot in zone 1, 2 or 12)", () => {
+    const carrot = makePlant({ lifeCycle: "biennial", hardinessZones: { min: 3, max: 10 } });
+    for (const hardinessZone of [1, 2, 12]) {
+      const rec = evaluatePlant(carrot, makeProfile({ climate: { ...makeProfile().climate, hardinessZone } }));
+      expect(find(rec.reasons, "zone", "blocker"), `zone ${hardinessZone}`).toHaveLength(0);
+      expect(find(rec.reasons, "zone", "warning").filter((r) => /zone|winter/i.test(r.message))).toHaveLength(0);
+      expect(rec.verdict).not.toBe("not-recommended");
+    }
+  });
   it("does not evaluate zone indoors", () => {
     const rec = evaluatePlant(perennial, makeProfile({ setting: "indoor" }));
     expect(find(rec.reasons, "zone")).toHaveLength(0);
@@ -149,6 +142,30 @@ describe("evaluatePlant: annual climate", () => {
     const rec = evaluatePlant(plant, makeProfile());
     const [reason] = find(rec.reasons, "zone", "warning");
     expect(reason.message).toMatch(/start.*indoors/i);
+  });
+  it("suggests transplants or early varieties instead when indoor starts are already planned", () => {
+    const plant = makePlant({ daysToMaturity: { min: 200, max: 220 }, planting: { startIndoorsWeeks: -8 } });
+    const [reason] = find(evaluatePlant(plant, makeProfile()).reasons, "zone", "warning");
+    expect(reason.message).not.toMatch(/start.*indoors/i);
+    expect(reason.message).toMatch(/transplants|early varieties/i);
+  });
+  it("skips the season-length check for fall-sown overwintering crops like garlic", () => {
+    const garlic = makePlant({
+      daysToMaturity: { min: 240, max: 270 },
+      planting: { fallSowWeeksBeforeFirstFrost: 4 },
+    });
+    expect(find(evaluatePlant(garlic, makeProfile()).reasons, "zone")).toHaveLength(0);
+  });
+  it("still checks the season when a fall-sowable crop also has a spring window", () => {
+    const plant = makePlant({
+      daysToMaturity: { min: 200, max: 220 },
+      planting: { fallSowWeeksBeforeFirstFrost: 4, directSowWeeks: -2 },
+    });
+    expect(find(evaluatePlant(plant, makeProfile()).reasons, "zone", "warning")).toHaveLength(1);
+  });
+  it("skips the season-length check for perennials", () => {
+    const plant = makePlant({ lifeCycle: "perennial", daysToMaturity: { min: 400, max: 500 }, hardinessZones: { min: 3, max: 9 } });
+    expect(find(evaluatePlant(plant, makeProfile()).reasons, "zone", "warning")).toHaveLength(0);
   });
   it("is positive about a season that is long enough, none when no maturity data", () => {
     const rec = evaluatePlant(makePlant({ daysToMaturity: { min: 60, max: 80 } }), makeProfile());
@@ -220,9 +237,15 @@ describe("evaluatePlant: containers", () => {
     const rec = evaluatePlant(makePlant({ container: { suitable: false } }), makeProfile({ containersOnly: true }));
     expect(find(rec.reasons, "container", "blocker")).toHaveLength(1);
   });
-  it("blocks unsuitable plants indoors", () => {
-    const rec = evaluatePlant(makePlant({ container: { suitable: false } }), makeProfile({ setting: "indoor" }));
-    expect(find(rec.reasons, "container", "blocker")).toHaveLength(1);
+  it("blocks unsuitable plants indoors, because indoor growing is container growing", () => {
+    const rec = evaluatePlant(makePlant({ container: { suitable: false } }), makeProfile({ setting: "indoor", containersOnly: false }));
+    const [reason] = find(rec.reasons, "container", "blocker");
+    expect(reason.message).toMatch(/indoor/i);
+    expect(reason.message).toMatch(/container/i);
+  });
+  it("rewards container-suitable plants indoors even when containersOnly is off", () => {
+    const rec = evaluatePlant(makePlant({ container: { suitable: true } }), makeProfile({ setting: "indoor", containersOnly: false }));
+    expect(find(rec.reasons, "container", "positive")).toHaveLength(1);
   });
   it("is positive and mentions minimum gallons for suitable plants", () => {
     const rec = evaluatePlant(makePlant({ container: { suitable: true, minGallons: 7 } }), makeProfile({ containersOnly: true }));

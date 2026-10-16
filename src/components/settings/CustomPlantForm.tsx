@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { Checkbox } from "@/components/setup/Checkbox";
 import { TemperatureInput } from "@/components/setup/TemperatureInput";
 import { Button, ChipGroup, Field, NumberInput, Select, TextInput, Textarea } from "@/components/ui";
@@ -11,7 +11,6 @@ import {
   ALLERGENS,
   GARDEN_GOALS,
   INDOOR_LIGHTS,
-  PETS,
   PLANT_CATEGORIES,
   SOIL_TYPES,
   SUN_EXPOSURES,
@@ -96,9 +95,13 @@ export function CustomPlantForm({ initial, unit, catalogPlants, onSave, onCancel
   const errorCount = Object.keys(errors).length;
   const unitLabel = unit === "C" ? "°C" : "°F";
 
-  function set<K extends keyof Values>(key: K, value: Values[K]) {
+  const set = useCallback(<K extends keyof Values>(key: K, value: Values[K]) => {
     setValues((v) => ({ ...v, [key]: value }));
-  }
+  }, []);
+  /** Stable handler shared by every `MultiSelectList` (they are memoised). */
+  const setList = useCallback((name: string, value: string[]) => {
+    setValues((v) => ({ ...v, [name]: value }));
+  }, []);
 
   const text = (key: keyof Values) => ({
     value: values[key] as string,
@@ -122,10 +125,10 @@ export function CustomPlantForm({ initial, unit, catalogPlants, onSave, onCancel
     onSave(toPlant(values, initial?.id ?? makeCustomPlantId(values.name)));
   }
 
-  const companionOptions = catalogPlants
-    .filter((p) => p.id !== initial?.id)
-    .map((p) => ({ value: p.id, label: p.name }));
-  const hasOutdoor = values.environments.includes("outdoor");
+  const companionOptions = useMemo(
+    () => catalogPlants.filter((p) => p.id !== initial?.id).map((p) => ({ value: p.id, label: p.name })),
+    [catalogPlants, initial?.id],
+  );
   const hasIndoor = values.environments.includes("indoor");
 
   return (
@@ -252,10 +255,10 @@ export function CustomPlantForm({ initial, unit, catalogPlants, onSave, onCancel
           {num("feedFrequencyDays", "Feeding frequency (days)", { min: 0, step: 1, hint: "0 means do not feed." })}
         </Grid>
         <MultiSelectList
-          label="Recommended fertilizers"
+          name="fertilizers" label="Recommended fertilizers"
           options={FERTILIZER_OPTIONS}
           value={values.fertilizers}
-          onChange={(v) => set("fertilizers", v)}
+          onChange={setList}
         />
         <Field label="Feeding notes">
           <Textarea {...text("fertilizerNotes")} rows={2} />
@@ -295,16 +298,16 @@ export function CustomPlantForm({ initial, unit, catalogPlants, onSave, onCancel
 
       <Section title="Companions" hint="Plants that grow well, or poorly, next to this one.">
         <MultiSelectList
-          label="Companion plants"
+          name="companions" label="Companion plants"
           options={companionOptions}
           value={values.companions}
-          onChange={(v) => set("companions", v)}
+          onChange={setList}
         />
         <MultiSelectList
-          label="Antagonist plants"
+          name="antagonists" label="Antagonist plants"
           options={companionOptions}
           value={values.antagonists}
-          onChange={(v) => set("antagonists", v)}
+          onChange={setList}
           error={errors.antagonists}
         />
         <Field label="Companion notes">
@@ -313,9 +316,9 @@ export function CustomPlantForm({ initial, unit, catalogPlants, onSave, onCancel
       </Section>
 
       <Section title="Insects">
-        <MultiSelectList label="Attracts" options={BENEFICIAL_OPTIONS} value={values.attracts} onChange={(v) => set("attracts", v)} />
-        <MultiSelectList label="Common pests" options={PEST_OPTIONS} value={values.pests} onChange={(v) => set("pests", v)} />
-        <MultiSelectList label="Repels" options={PEST_OPTIONS} value={values.repels} onChange={(v) => set("repels", v)} />
+        <MultiSelectList name="attracts" label="Attracts" options={BENEFICIAL_OPTIONS} value={values.attracts} onChange={setList} />
+        <MultiSelectList name="pests" label="Common pests" options={PEST_OPTIONS} value={values.pests} onChange={setList} />
+        <MultiSelectList name="repels" label="Repels" options={PEST_OPTIONS} value={values.repels} onChange={setList} />
       </Section>
 
       <Section title="Safety">
@@ -346,12 +349,12 @@ export function CustomPlantForm({ initial, unit, catalogPlants, onSave, onCancel
       </Section>
 
       <Section title="Tools">
-        <MultiSelectList label="Required tools" options={TOOL_OPTIONS} value={values.requiredTools} onChange={(v) => set("requiredTools", v)} />
+        <MultiSelectList name="requiredTools" label="Required tools" options={TOOL_OPTIONS} value={values.requiredTools} onChange={setList} />
         <MultiSelectList
-          label="Helpful tools"
+          name="helpfulTools" label="Helpful tools"
           options={TOOL_OPTIONS}
           value={values.helpfulTools}
-          onChange={(v) => set("helpfulTools", v)}
+          onChange={setList}
           error={errors.helpfulTools}
         />
       </Section>

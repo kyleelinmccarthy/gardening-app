@@ -1,4 +1,8 @@
+import { DEFAULT_CELL_SIZE_INCHES, MAX_BED_DIMENSION, MIN_BED_DIMENSION, isContainerBedKind } from "@/domain/constants";
+import { todayIso } from "@/domain/dates";
 import { createId } from "@/lib/id";
+import { withoutUndefined } from "@/lib/object";
+import { isCellInBed, sanitizeAppData } from "@/storage/sanitize";
 import type {
   AppData,
   AppSettings,
@@ -80,7 +84,8 @@ function updateGarden(state: AppData, gardenId: string, fn: (garden: Garden) => 
 /** Shallow-patches the item with `id`; returns the same array if it is not found. */
 function patchById<T extends { id: string }>(items: T[], id: string, changes: Partial<Omit<T, "id">>): T[] {
   if (!items.some((item) => item.id === id)) return items;
-  return items.map((item) => (item.id === id ? { ...item, ...changes } : item));
+  const patch = withoutUndefined(changes);
+  return items.map((item) => (item.id === id ? { ...item, ...patch } : item));
 }
 
 function removeById<T extends { id: string }>(items: T[], id: string): T[] {
@@ -96,14 +101,7 @@ function updateBed(garden: Garden, bedId: string, fn: (bed: Bed) => Bed): Garden
   return { ...garden, beds: garden.beds.map((b) => (b === bed ? updated : b)) };
 }
 
-const CONTAINER_BED_KINDS: readonly Bed["kind"][] = ["container", "windowsill", "shelf"];
-
-const isInBounds = (bed: Bed, x: number, y: number) =>
-  Number.isInteger(x) && Number.isInteger(y) && x >= 0 && y >= 0 && x < bed.columns && y < bed.rows;
-
 const isActivePlanting = (p: Planting) => p.status === "planned" || p.status === "growing";
-
-const todayIso = () => new Date().toISOString().slice(0, 10);
 
 /** Removes a key from a copy of the object (so it does not serialise as `undefined`). */
 function withoutKey<T extends object, K extends keyof T>(obj: T, key: K): Omit<T, K> {
@@ -117,7 +115,7 @@ function placeInBed(
   action: Extract<AppAction, { type: "bed/place" }>,
 ): Garden {
   const bed = garden.beds.find((b) => b.id === action.bedId);
-  if (!bed || !isInBounds(bed, action.x, action.y)) return garden;
+  if (!bed || !isCellInBed(bed, action.x, action.y)) return garden;
 
   const placements = [
     ...bed.placements.filter((p) => p.x !== action.x || p.y !== action.y),
@@ -141,7 +139,7 @@ function placeInBed(
           quantity: 1,
           plantedOn: action.plantedOn ?? todayIso(),
           status: "planned" as const,
-          inContainer: CONTAINER_BED_KINDS.includes(bed.kind),
+          inContainer: isContainerBedKind(bed.kind),
         },
       ];
 
@@ -152,11 +150,52 @@ function placeInBed(
   };
 }
 
+/** Rounds to a whole number within the allowed grid size; non-numbers yield undefined (= "no change"). */
+function validDimension(value: unknown): number | undefined {
+  if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
+  return Math.min(MAX_BED_DIMENSION, Math.max(MIN_BED_DIMENSION, Math.round(value)));
+}
+
+function validCellSize(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined;
+}
+
+/** Drops undefined values and replaces invalid grid fields, so a bed always stays serialisable and valid. */
+function sanitizeBedChanges(changes: BedChanges): BedChanges {
+  const { columns, rows, cellSizeInches, ...rest } = withoutUndefined(changes);
+  return withoutUndefined({
+    ...rest,
+    columns: validDimension(columns),
+    rows: validDimension(rows),
+    cellSizeInches: validCellSize(cellSizeInches),
+  });
+}
+
+/** A new bed with in-range dimensions and a positive cell size. */
+function normalizeNewBed(bed: Bed): Bed {
+  return {
+    ...bed,
+    columns: validDimension(bed.columns) ?? MIN_BED_DIMENSION,
+    rows: validDimension(bed.rows) ?? MIN_BED_DIMENSION,
+    cellSizeInches: validCellSize(bed.cellSizeInches) ?? DEFAULT_CELL_SIZE_INCHES,
+  };
+}
+
 function updateBedDetails(bed: Bed, changes: BedChanges): Bed {
-  const next = { ...bed, ...changes };
+  const next = { ...bed, ...sanitizeBedChanges(changes) };
   // Shrinking the grid drops placements that no longer fit.
-  const placements = bed.placements.filter((p) => isInBounds(next, p.x, p.y));
+  const placements = bed.placements.filter((p) => isCellInBed(next, p.x, p.y));
   return placements.length === bed.placements.length ? next : { ...next, placements };
+}
+
+/** Keeps `inContainer` of a bed's plantings in line with the bed's kind. */
+function syncContainerFlag(garden: Garden, bed: Bed): Garden {
+  const inContainer = isContainerBedKind(bed.kind);
+  if (garden.plantings.every((p) => p.bedId !== bed.id || p.inContainer === inContainer)) return garden;
+  return {
+    ...garden,
+    plantings: garden.plantings.map((p) => (p.bedId === bed.id ? { ...p, inContainer } : p)),
+  };
 }
 
 // --- reducer ---------------------------------------------------------------
@@ -170,7 +209,7 @@ export function appReducer(state: AppData, action: AppAction): AppData {
       return updateGarden(state, action.gardenId, (g) => ({
         ...g,
         name: action.name ?? g.name,
-        profile: action.profile ? { ...g.profile, ...action.profile } : g.profile,
+        profile: action.profile ? { ...g.profile, ...withoutUndefined(action.profile) } : g.profile,
       }));
     case "garden/delete": {
       if (!state.gardens.some((g) => g.id === action.gardenId)) return state;
@@ -186,11 +225,15 @@ export function appReducer(state: AppData, action: AppAction): AppData {
 
     // beds
     case "bed/add":
-      return updateGarden(state, action.gardenId, (g) => ({ ...g, beds: [...g.beds, action.bed] }));
+      return updateGarden(state, action.gardenId, (g) => ({ ...g, beds: [...g.beds, normalizeNewBed(action.bed)] }));
     case "bed/update":
-      return updateGarden(state, action.gardenId, (g) =>
-        updateBed(g, action.bedId, (bed) => updateBedDetails(bed, action.changes)),
-      );
+      return updateGarden(state, action.gardenId, (g) => {
+        const bed = g.beds.find((b) => b.id === action.bedId);
+        if (!bed) return g;
+        const updated = updateBedDetails(bed, action.changes);
+        const withBed = { ...g, beds: g.beds.map((b) => (b === bed ? updated : b)) };
+        return updated.kind === bed.kind ? withBed : syncContainerFlag(withBed, updated);
+      });
     case "bed/delete":
       return updateGarden(state, action.gardenId, (g) => {
         if (!g.beds.some((b) => b.id === action.bedId)) return g;
@@ -282,8 +325,8 @@ export function appReducer(state: AppData, action: AppAction): AppData {
     case "customPlant/delete":
       return { ...state, customPlants: state.customPlants.filter((p) => p.id !== action.plantId) };
     case "settings/update":
-      return { ...state, settings: { ...state.settings, ...action.changes } };
+      return { ...state, settings: { ...state.settings, ...withoutUndefined(action.changes) } };
     case "data/replace":
-      return action.data;
+      return sanitizeAppData(action.data);
   }
 }

@@ -99,16 +99,17 @@ export function suggestCompanions(plant: Plant, catalog: PlantCatalog, limit = 8
 }
 
 /**
- * Square-foot-gardening density: how many plants fit one cell, or how many
- * cells (a square block) one large plant needs.
+ * Square-foot-gardening density: plants are laid out on a grid, so a cell holds
+ * floor(cell / spacing)² plants (3" → 16, 4" → 9, 5" → 4, 6" → 4, 8" → 1).
+ * A plant spaced wider than the cell needs a square block of ceil(spacing / cell)² cells.
  */
 export function plantsPerCell(plant: Plant, cellSizeInches: number): PlantsPerCell {
   const spacing = plant.spacingInches;
   if (!(spacing > 0) || !(cellSizeInches > 0)) return { perCell: 1, cellsNeeded: 1 };
   if (spacing <= cellSizeInches) {
-    // Small epsilon guards against float error such as (12/4)^2 = 8.999...
-    const perCell = Math.max(1, Math.floor((cellSizeInches / spacing) ** 2 + 1e-9));
-    return { perCell, cellsNeeded: 1 };
+    // Plants sit on a grid: whole plants per row, squared. (Small epsilon guards float error.)
+    const perRow = Math.max(1, Math.floor(cellSizeInches / spacing + 1e-9));
+    return { perCell: perRow * perRow, cellsNeeded: 1 };
   }
   const span = Math.ceil(spacing / cellSizeInches);
   return { perCell: 1, cellsNeeded: span * span };

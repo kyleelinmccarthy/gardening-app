@@ -251,6 +251,13 @@ describe("TOOLS", () => {
 });
 
 describe("ZONES", () => {
+  it("names Boston and New York as zone 7 examples (2023 USDA map)", () => {
+    const zone7 = ZONES.find((z) => z.zone === 7)!;
+    expect(zone7.description).toMatch(/Boston/);
+    expect(zone7.description).toMatch(/New York/);
+    for (const z of ZONES.filter((x) => x.zone !== 7)) expect(z.description, `zone ${z.zone}`).not.toMatch(/Boston|New York/);
+  });
+
   it("covers USDA zones 1..13 contiguously, in order", () => {
     expect(ZONES.map((z) => z.zone)).toEqual(Array.from({ length: 13 }, (_, i) => i + 1));
   });

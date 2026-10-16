@@ -72,8 +72,11 @@ export function monthDayToIso(md: string, year: number): string {
   const m = MONTH_DAY.exec(md);
   if (!m) throw new Error(`Invalid month-day: "${md}"`);
   const [month, day] = [Number(m[1]), Number(m[2])];
+  if (month < 1 || month > 12) throw new Error(`Invalid month-day: "${md}"`);
   const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
-  if (month < 1 || month > 12 || day < 1 || day > 31) throw new Error(`Invalid month-day: "${md}"`);
+  // February 29th is always accepted (and clamped below) so "02-29" works in any year.
+  const maxDay = month === 2 ? 29 : daysInMonth;
+  if (day < 1 || day > maxDay) throw new Error(`Invalid month-day: "${md}"`);
   return `${pad(year, 4)}-${pad(month)}-${pad(Math.min(day, daysInMonth))}`;
 }
 

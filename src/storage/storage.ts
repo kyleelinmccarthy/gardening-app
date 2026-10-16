@@ -3,6 +3,9 @@ export interface KeyValueStorage {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;
   removeItem(key: string): void;
+  /** Optional key enumeration (as on Web Storage); lets callers list and prune related keys. */
+  readonly length?: number;
+  key?(index: number): string | null;
 }
 
 /** In-memory storage: used on the server, in private mode fallbacks and in tests. */
@@ -12,6 +15,10 @@ export function createMemoryStorage(): KeyValueStorage {
     getItem: (key) => map.get(key) ?? null,
     setItem: (key, value) => void map.set(key, value),
     removeItem: (key) => void map.delete(key),
+    get length() {
+      return map.size;
+    },
+    key: (index) => [...map.keys()][index] ?? null,
   };
 }
 

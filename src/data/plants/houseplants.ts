@@ -13,14 +13,15 @@ const SAFE = {
 /**
  * Insoluble calcium oxalate (aroids: pothos, philodendron, monstera, peace lily,
  * ZZ plant, Chinese evergreen). Chewing releases needle-like raphides that cause
- * immediate oral pain and swelling. Painful but rarely life-threatening.
+ * immediate oral pain and swelling. Painful but self-limiting and rarely
+ * life-threatening, so "mild" (a warning, not a blocker; see safety.ts rubric).
  */
 const OXALATE = {
-  cat: "moderate",
-  dog: "moderate",
+  cat: "mild",
+  dog: "mild",
   horse: "mild",
-  bird: "moderate",
-  rabbit: "moderate",
+  bird: "mild",
+  rabbit: "mild",
   human: "mild",
 } as const satisfies Omit<Toxicity, "notes">;
 
@@ -81,7 +82,7 @@ export const HOUSEPLANTS: Plant[] = [
     toxicity: {
       ...OXALATE,
       notes:
-        "Leaves, stems and sap (insoluble calcium oxalate): oral pain and swelling, drooling, pawing at the mouth, vomiting and difficulty swallowing in cats and dogs. ASPCA lists as toxic to cats, dogs and horses. Rarely life-threatening; call a vet if swelling is severe.",
+        "Leaves, stems and sap (insoluble calcium oxalate): oral pain and swelling, drooling, pawing at the mouth, vomiting and difficulty swallowing in cats and dogs. ASPCA lists as toxic to cats, dogs and horses. Usually self-limiting and rarely life-threatening; keep out of reach of pets and call a vet if swelling is severe.",
     },
     allergens: ["contact-dermatitis"],
     allergyNotes: "Sap can irritate skin and eyes; wear gloves when pruning.",
@@ -299,7 +300,7 @@ export const HOUSEPLANTS: Plant[] = [
     toxicity: {
       ...OXALATE,
       notes:
-        "Leaves, stems and flowers (insoluble calcium oxalate): oral irritation, drooling, vomiting and difficulty swallowing in cats and dogs. ASPCA lists as toxic to dogs, cats and horses. Not a true lily: it does not cause the kidney failure that true lilies (Lilium) cause in cats.",
+        "Leaves, stems and flowers (insoluble calcium oxalate): oral irritation, drooling, vomiting and difficulty swallowing in cats and dogs. ASPCA lists as toxic to dogs, cats and horses. Not a true lily: it does not cause the kidney failure that true lilies (Lilium) cause in cats. Usually self-limiting; keep out of reach of pets.",
     },
     allergens: ["contact-dermatitis", "pollen"],
     allergyNotes: "Sap may irritate skin and the pollen has been linked to occupational allergy; wear gloves when repotting.",
@@ -370,7 +371,7 @@ export const HOUSEPLANTS: Plant[] = [
     toxicity: {
       ...OXALATE,
       notes:
-        "Leaves, stems and unripe fruit (insoluble calcium oxalate): mouth and tongue irritation, drooling, vomiting and difficulty swallowing in cats and dogs. ASPCA lists as toxic to dogs, cats and horses. Ripe fruit is edible only in the tropics; unripe fruit irritates.",
+        "Leaves, stems and unripe fruit (insoluble calcium oxalate): mouth and tongue irritation, drooling, vomiting and difficulty swallowing in cats and dogs. ASPCA lists as toxic to dogs, cats and horses. Ripe fruit is edible only in the tropics; unripe fruit irritates. Usually self-limiting; keep out of reach of pets.",
     },
     allergens: ["contact-dermatitis"],
     allergyNotes: "Sap can cause skin irritation; wear gloves when pruning or repotting.",
@@ -441,7 +442,7 @@ export const HOUSEPLANTS: Plant[] = [
     toxicity: {
       ...OXALATE,
       notes:
-        "All parts, especially sap (insoluble calcium oxalate): mouth irritation, drooling, vomiting and skin irritation in cats and dogs. ASPCA lists as toxic to dogs, cats and horses. Wash hands after handling.",
+        "All parts, especially sap (insoluble calcium oxalate): mouth irritation, drooling, vomiting and skin irritation in cats and dogs. ASPCA lists as toxic to dogs, cats and horses. Usually self-limiting; keep out of reach of pets and wash hands after handling.",
     },
     allergens: ["contact-dermatitis"],
     allergyNotes: "Sap can irritate skin and eyes; wear gloves when dividing or repotting and wash hands after handling.",
@@ -801,7 +802,7 @@ export const HOUSEPLANTS: Plant[] = [
     toxicity: {
       ...OXALATE,
       notes:
-        "Leaves, stems and sap (insoluble calcium oxalate): oral pain, drooling, vomiting and difficulty swallowing in cats and dogs. ASPCA lists philodendron as toxic to cats, dogs and horses. Rarely life-threatening.",
+        "Leaves, stems and sap (insoluble calcium oxalate): oral pain, drooling, vomiting and difficulty swallowing in cats and dogs. ASPCA lists philodendron as toxic to cats, dogs and horses. Usually self-limiting and rarely life-threatening; keep out of reach of pets.",
     },
     allergens: ["contact-dermatitis"],
     allergyNotes: "Sap can cause skin irritation; wear gloves when pruning.",
@@ -949,7 +950,7 @@ export const HOUSEPLANTS: Plant[] = [
     toxicity: {
       ...OXALATE,
       notes:
-        "Leaves, stems and red berries (insoluble calcium oxalate): oral irritation, drooling, vomiting and difficulty swallowing in cats and dogs. ASPCA lists as toxic to cats, dogs and horses. Sap may irritate skin.",
+        "Leaves, stems and red berries (insoluble calcium oxalate): oral irritation, drooling, vomiting and difficulty swallowing in cats and dogs. ASPCA lists as toxic to cats, dogs and horses. Sap may irritate skin. Usually self-limiting; keep out of reach of pets.",
     },
     allergens: ["contact-dermatitis"],
     allergyNotes: "Sap can cause skin irritation; wear gloves when handling.",
@@ -1291,14 +1292,14 @@ export const HOUSEPLANTS: Plant[] = [
     pests: ["spider-mites", "mealybugs", "scale-insects", "thrips", "fungus-gnats"],
     repels: [],
     toxicity: {
-      cat: "moderate",
-      dog: "moderate",
+      cat: "mild",
+      dog: "mild",
       horse: "mild",
       bird: "mild",
       rabbit: "mild",
       human: "mild",
       notes:
-        "Leaves and stems (saponins): vomiting (sometimes with blood), drooling, loss of appetite, lethargy; in cats also dilated pupils and an increased heart rate. ASPCA lists as toxic to cats and dogs. Usually not fatal but warrants a vet call.",
+        "Leaves and stems (saponins): vomiting (sometimes with blood), drooling, loss of appetite, lethargy; in cats also dilated pupils and an increased heart rate. ASPCA lists as toxic to cats and dogs. Usually self-limiting; keep out of reach of pets and call a vet if vomiting persists or contains blood.",
     },
     allergens: [],
     requiredTools: [],

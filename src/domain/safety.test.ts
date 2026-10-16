@@ -96,6 +96,18 @@ describe("getSafetyIssues", () => {
     },
   );
 
+  it("names the toxic part via the notes in the child warning when notes exist", () => {
+    const plant = makePlant({ toxicity: tox({ human: "mild", notes: "Leaves and green fruit: stomach upset." }) });
+    const [issue] = getSafetyIssues(plant, { ...noOne, hasChildren: true });
+    expect(issue.message).toBe("Parts of this plant are mildly toxic if eaten — Leaves and green fruit: stomach upset.");
+  });
+
+  it("keeps the generic child warning when there are no notes", () => {
+    const plant = makePlant({ toxicity: tox({ human: "moderate" }) });
+    const [issue] = getSafetyIssues(plant, { ...noOne, hasChildren: true });
+    expect(issue.message).toBe("Moderately toxic if eaten — keep out of reach of children");
+  });
+
   it("does not mention children when there are none", () => {
     const plant = makePlant({ toxicity: tox({ human: "severe" }) });
     expect(getSafetyIssues(plant, noOne)).toEqual([]);

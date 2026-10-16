@@ -41,6 +41,14 @@ function withNotes(message: string, notes?: string): string {
   return notes ? `${message} — ${notes}` : message;
 }
 
+/*
+ * Toxicity rubric (how the levels are used when rating plants and when grading issues):
+ *   mild     - GI or oral irritation that is self-limiting (drooling, brief vomiting) -> warning
+ *   moderate - significant systemic symptoms; a vet visit is likely                 -> blocker (pets)
+ *   severe   - potentially fatal or organ damage                                     -> blocker (pets)
+ * Human toxicity is rated by the part people commonly handle or eat, and is always
+ * only a warning (children); toxic leaves or green parts are described in `notes`.
+ */
 function petIssues(plant: Plant, pets: Pet[]): Reason[] {
   const issues: Reason[] = [];
   for (const pet of pets) {
@@ -58,16 +66,11 @@ function petIssues(plant: Plant, pets: Pet[]): Reason[] {
 function childIssues(plant: Plant, hasChildren: boolean): Reason[] {
   const level = plant.toxicity.human;
   if (!hasChildren || level === "non-toxic") return [];
-  return [
-    {
-      kind: "warning",
-      topic: "children",
-      message: withNotes(
-        `${SEVERITY_ADVERB[level]} toxic if eaten — keep out of reach of children`,
-        plant.toxicity.notes,
-      ),
-    },
-  ];
+  const { notes } = plant.toxicity;
+  const message = notes
+    ? withNotes(`Parts of this plant are ${SEVERITY_ADVERB[level].toLowerCase()} toxic if eaten`, notes)
+    : `${SEVERITY_ADVERB[level]} toxic if eaten — keep out of reach of children`;
+  return [{ kind: "warning", topic: "children", message }];
 }
 
 function allergyIssues(plant: Plant, allergies: Allergen[]): Reason[] {

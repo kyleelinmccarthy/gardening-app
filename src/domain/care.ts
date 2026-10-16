@@ -11,6 +11,7 @@ import type {
   Planting,
   Reminder,
 } from "./types";
+import { humanizeId } from "./text";
 
 // ---------------------------------------------------------------------------
 // Tunable constants
@@ -106,12 +107,8 @@ function lastLogDate(log: readonly CareLogEntry[], plantingId: string, type: Car
   return latest;
 }
 
-function humanize(id: string): string {
-  return id.replace(/-/g, " ");
-}
-
 function pestDetail(plant: Plant): string {
-  const top = plant.pests.slice(0, TOP_PESTS_IN_DETAIL).map(humanize);
+  const top = plant.pests.slice(0, TOP_PESTS_IN_DETAIL).map(humanizeId);
   return top.length > 0
     ? `Look for ${top.join(", ")}. Check leaf undersides and new growth.`
     : "Look over leaves and stems for pests and disease.";

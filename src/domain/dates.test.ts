@@ -113,6 +113,16 @@ describe("monthDayToIso", () => {
   it("throws on invalid month-day", () => {
     expect(() => monthDayToIso("13-01", 2025)).toThrow();
     expect(() => monthDayToIso("4-3", 2025)).toThrow();
+    expect(() => monthDayToIso("00-10", 2025)).toThrow();
+    expect(() => monthDayToIso("04-00", 2025)).toThrow();
+  });
+
+  it("throws on days beyond the month length", () => {
+    expect(() => monthDayToIso("04-31", 2025)).toThrow();
+    expect(() => monthDayToIso("06-31", 2025)).toThrow();
+    expect(() => monthDayToIso("02-30", 2025)).toThrow();
+    expect(() => monthDayToIso("02-30", 2024)).toThrow();
+    expect(monthDayToIso("01-31", 2025)).toBe("2025-01-31");
   });
 });
 

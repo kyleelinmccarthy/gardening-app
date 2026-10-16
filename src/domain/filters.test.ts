@@ -27,6 +27,7 @@ const lily = makePlant({
   difficulty: "moderate",
   environments: ["indoor"],
   container: { suitable: true, minGallons: 2 },
+  lifeCycle: "perennial",
   hardinessZones: { min: 10, max: 12 },
   allergens: ["pollen"],
   goals: ["air-purifying", "ornamental"],
@@ -51,6 +52,7 @@ const oak = makePlant({
   difficulty: "challenging",
   environments: ["outdoor"],
   container: { suitable: false },
+  lifeCycle: "perennial",
   hardinessZones: { min: 3, max: 8 },
   goals: ["ornamental"],
 });
@@ -145,7 +147,12 @@ describe("filterPlants", () => {
     expect(ids(filterPlants(all, { zone: 4 }))).toEqual(["basil", "oak"]);
     expect(ids(filterPlants(all, { zone: 10 }))).toEqual(["basil", "lily"]);
     expect(ids(filterPlants(all, { zone: 8 }))).toEqual(["basil", "oak"]);
-    expect(filterPlants(all, { zone: 1 })).toEqual([]);
+    expect(ids(filterPlants(all, { zone: 1 }))).toEqual(["basil"]);
+  });
+
+  it("never excludes annuals by zone", () => {
+    expect(ids(filterPlants(all, { zone: 13 }))).toEqual(["basil"]);
+    expect(ids(filterPlants(all, { zone: 2 }))).toEqual(["basil"]);
   });
 
   it("filters by goals when the plant serves any selected goal", () => {

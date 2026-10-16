@@ -7,16 +7,20 @@ import {
   useMemo,
   useReducer,
   useRef,
-  useState,
   type Dispatch,
   type ReactNode,
 } from "react";
 import { BUILTIN_PLANTS } from "@/data/plants";
 import { createPlantCatalog } from "@/domain/catalog";
 import type { AppData, Garden, PlantCatalog } from "@/domain/types";
-import { createLocalRepository, type AppDataRepository } from "@/storage/repository";
+import {
+  createLocalRepository,
+  createUnavailableRepository,
+  type AppDataRepository,
+  type StorageStatus,
+} from "@/storage/repository";
 import { createEmptyAppData } from "@/storage/schema";
-import { createMemoryStorage, getBrowserStorage } from "@/storage/storage";
+import { getBrowserStorage } from "@/storage/storage";
 import { appReducer, type AppAction } from "./appReducer";
 
 export interface AppDataContextValue {
@@ -24,6 +28,11 @@ export interface AppDataContextValue {
   dispatch: Dispatch<AppAction>;
   /** False until saved data has been read after mount (SSR renders empty data). */
   hydrated: boolean;
+  /**
+   * What the last read of storage found. "corrupt": saved data was unreadable (a backup was kept);
+   * "unavailable": the browser blocks storage, so nothing is saved. Meaningful once `hydrated`.
+   */
+  storageStatus: StorageStatus;
   activeGarden: Garden | null;
   catalog: PlantCatalog;
 }
@@ -31,21 +40,27 @@ export interface AppDataContextValue {
 const AppDataContext = createContext<AppDataContextValue | null>(null);
 
 function createDefaultRepository(): AppDataRepository {
-  return createLocalRepository(getBrowserStorage() ?? createMemoryStorage());
+  const storage = getBrowserStorage();
+  return storage ? createLocalRepository(storage) : createUnavailableRepository();
 }
 
-/** Internal action: first load from storage; flips `hydrated` in the same update as the data. */
-const HYDRATE = "@@hydrate";
-type ProviderAction = AppAction | { type: typeof HYDRATE; data: AppData };
+/** Internal action: (re)load from storage; flips `hydrated` in the same update as the data. */
+const LOAD = "@@load";
+type ProviderAction = AppAction | { type: typeof LOAD; data: AppData; status: StorageStatus };
 interface ProviderState {
   data: AppData;
   hydrated: boolean;
+  storageStatus: StorageStatus;
 }
 
-const initialProviderState = (): ProviderState => ({ data: createEmptyAppData(), hydrated: false });
+const initialProviderState = (): ProviderState => ({
+  data: createEmptyAppData(),
+  hydrated: false,
+  storageStatus: "empty",
+});
 
 function providerReducer(state: ProviderState, action: ProviderAction): ProviderState {
-  if (action.type === HYDRATE) return { data: action.data, hydrated: true };
+  if (action.type === LOAD) return { data: action.data, hydrated: true, storageStatus: action.status };
   const data = appReducer(state.data, action);
   return data === state.data ? state : { ...state, data };
 }
@@ -57,39 +72,43 @@ export function AppDataProvider({
   children: ReactNode;
   repository?: AppDataRepository;
 }) {
-  // Lazily created once; the default touches localStorage only via load/save in effects.
-  const [defaultRepository] = useState(() => (repository ? null : createDefaultRepository()));
-  const repo = repository ?? defaultRepository!;
-
-  const [{ data, hydrated }, dispatch] = useReducer(providerReducer, undefined, initialProviderState);
+  const [{ data, hydrated, storageStatus }, dispatch] = useReducer(providerReducer, undefined, initialProviderState);
+  /** The repository in use; the default one is created after mount so render never touches storage (SSR-safe). */
+  const repoRef = useRef<AppDataRepository | null>(null);
   /** The last object known to match storage; avoids echoing loaded data back. */
   const persisted = useRef<AppData | null>(null);
 
   // Hydrate after mount so server and first client render agree.
   useEffect(() => {
-    const loaded = repo.load();
-    persisted.current = loaded;
-    dispatch({ type: HYDRATE, data: loaded });
-  }, [repo]);
+    const repo = repository ?? createDefaultRepository();
+    repoRef.current = repo;
+    const loaded = repo.loadWithStatus();
+    persisted.current = loaded.data;
+    dispatch({ type: LOAD, data: loaded.data, status: loaded.status });
+  }, [repository]);
 
-  // Persist every change once hydrated.
+  // Persist every change once hydrated, unless storage could not even be read
+  // (writes would fail, or clobber data we never saw).
   useEffect(() => {
-    if (!hydrated || persisted.current === data) return;
+    if (!hydrated || storageStatus === "unavailable" || persisted.current === data) return;
     persisted.current = data;
-    repo.save(data);
-  }, [data, hydrated, repo]);
+    repoRef.current?.save(data);
+  }, [data, hydrated, storageStatus]);
 
-  // Cross-tab sync: another tab wrote to storage, so reload.
+  // Cross-tab sync: another tab wrote to our key (or cleared storage), so reload.
   useEffect(() => {
     if (!hydrated) return;
-    const onStorage = () => {
-      const loaded = repo.load();
-      persisted.current = loaded;
-      dispatch({ type: "data/replace", data: loaded });
+    const onStorage = (e: StorageEvent) => {
+      const repo = repoRef.current;
+      if (!repo) return;
+      if (e.key !== null && repo.storageKey !== undefined && e.key !== repo.storageKey) return;
+      const loaded = repo.loadWithStatus();
+      persisted.current = loaded.data;
+      dispatch({ type: LOAD, data: loaded.data, status: loaded.status });
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
-  }, [hydrated, repo]);
+  }, [hydrated]);
 
   const catalog = useMemo(() => createPlantCatalog(BUILTIN_PLANTS, data.customPlants), [data.customPlants]);
 
@@ -99,8 +118,8 @@ export function AppDataProvider({
   );
 
   const value = useMemo<AppDataContextValue>(
-    () => ({ data, dispatch, hydrated, activeGarden, catalog }),
-    [data, hydrated, activeGarden, catalog],
+    () => ({ data, dispatch, hydrated, storageStatus, activeGarden, catalog }),
+    [data, hydrated, storageStatus, activeGarden, catalog],
   );
 
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>;

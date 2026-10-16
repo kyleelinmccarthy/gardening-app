@@ -36,6 +36,15 @@ describe("display primitives", () => {
     expect(screen.getByRole("button", { name: "Add" })).toBeInTheDocument();
   });
 
+  it("EmptyState renders an h2 by default and honours headingLevel", () => {
+    const { rerender } = render(<EmptyState title="Nothing" />);
+    expect(screen.getByRole("heading", { level: 2, name: "Nothing" })).toBeInTheDocument();
+    rerender(<EmptyState title="Nothing" headingLevel="h1" />);
+    expect(screen.getByRole("heading", { level: 1, name: "Nothing" })).toBeInTheDocument();
+    rerender(<EmptyState title="Nothing" headingLevel="h3" />);
+    expect(screen.getByRole("heading", { level: 3, name: "Nothing" })).toBeInTheDocument();
+  });
+
   it("StatTile shows label, value and hint", () => {
     render(<StatTile label="Plants" value={12} hint="3 growing" />);
     expect(screen.getByText("Plants")).toBeInTheDocument();

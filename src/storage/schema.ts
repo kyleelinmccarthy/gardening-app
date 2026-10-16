@@ -1,6 +1,19 @@
 import { z } from "zod";
+import { MAX_BED_DIMENSION, MIN_BED_DIMENSION } from "@/domain/constants";
+import { isValidIsoDate } from "@/domain/dates";
 import {
   ALLERGENS,
+  BED_KINDS,
+  CARE_TYPES,
+  DRAINAGES,
+  FEEDING_LEVELS,
+  FERTILIZER_IDS,
+  GARDEN_SETTINGS,
+  INSECT_IDS,
+  LIFE_CYCLES,
+  PLANTING_STATUSES,
+  TEMPERATURE_UNITS,
+  TOOL_IDS,
   DIFFICULTIES,
   EXPERIENCE_LEVELS,
   GARDEN_GOALS,
@@ -34,126 +47,34 @@ const allergen = z.enum(ALLERGENS);
 const gardenGoal = z.enum(GARDEN_GOALS);
 const spaceSize = z.enum(SPACE_SIZES);
 
-const drainage = z.enum(["well-drained", "moist", "wet"]);
-const lifeCycle = z.enum(["annual", "biennial", "perennial"]);
-const feedingLevel = z.enum(["light", "moderate", "heavy"]);
-const gardenSetting = z.enum(["indoor", "outdoor"]);
-const temperatureUnit = z.enum(["F", "C"]);
-const bedKind = z.enum(["raised-bed", "in-ground", "container", "windowsill", "shelf"]);
-const plantingStatus = z.enum(["planned", "growing", "harvested", "removed"]);
-const careType = z.enum([
-  "water",
-  "fertilize",
-  "prune",
-  "harvest",
-  "inspect-pests",
-  "mulch",
-  "repot",
-  "custom",
-]);
-const toolId = z.enum([
-  "hand-trowel",
-  "pruners",
-  "garden-gloves",
-  "watering-can",
-  "garden-hose",
-  "drip-irrigation",
-  "soaker-hose",
-  "spade",
-  "garden-fork",
-  "hoe",
-  "rake",
-  "wheelbarrow",
-  "trellis",
-  "stakes",
-  "tomato-cage",
-  "raised-bed",
-  "containers",
-  "hanging-basket",
-  "grow-light",
-  "heat-mat",
-  "seed-trays",
-  "humidity-dome",
-  "humidifier",
-  "pebble-tray",
-  "greenhouse",
-  "cold-frame",
-  "row-cover",
-  "bird-netting",
-  "mulch",
-  "compost-bin",
-  "soil-test-kit",
-  "moisture-meter",
-  "spray-bottle",
-  "thermometer",
-]);
-const insectId = z.enum([
-  "aphids",
-  "spider-mites",
-  "whiteflies",
-  "fungus-gnats",
-  "mealybugs",
-  "scale-insects",
-  "thrips",
-  "slugs-snails",
-  "cabbage-worms",
-  "tomato-hornworm",
-  "cucumber-beetles",
-  "squash-vine-borer",
-  "squash-bugs",
-  "flea-beetles",
-  "colorado-potato-beetle",
-  "japanese-beetles",
-  "carrot-rust-fly",
-  "leaf-miners",
-  "cutworms",
-  "corn-earworm",
-  "mexican-bean-beetle",
-  "onion-maggots",
-  "earwigs",
-  "deer",
-  "rabbits",
-  "birds",
-  "squirrels",
-  "honeybees",
-  "native-bees",
-  "bumblebees",
-  "butterflies",
-  "moths",
-  "hummingbirds",
-  "ladybugs",
-  "lacewings",
-  "hoverflies",
-  "parasitic-wasps",
-  "ground-beetles",
-  "praying-mantis",
-  "earthworms",
-]);
-const fertilizerId = z.enum([
-  "compost",
-  "aged-manure",
-  "balanced-10-10-10",
-  "high-nitrogen",
-  "bloom-booster",
-  "fish-emulsion",
-  "bone-meal",
-  "blood-meal",
-  "kelp-seaweed",
-  "worm-castings",
-  "tomato-feed",
-  "acid-fertilizer",
-  "cactus-fertilizer",
-  "orchid-fertilizer",
-  "houseplant-liquid",
-  "slow-release-granules",
-  "epsom-salt",
-  "none",
-]);
+const drainage = z.enum(DRAINAGES);
+const lifeCycle = z.enum(LIFE_CYCLES);
+const feedingLevel = z.enum(FEEDING_LEVELS);
+const gardenSetting = z.enum(GARDEN_SETTINGS);
+const temperatureUnit = z.enum(TEMPERATURE_UNITS);
+const bedKind = z.enum(BED_KINDS);
+const plantingStatus = z.enum(PLANTING_STATUSES);
+const careType = z.enum(CARE_TYPES);
+const toolId = z.enum(TOOL_IDS);
+const insectId = z.enum(INSECT_IDS);
+const fertilizerId = z.enum(FERTILIZER_IDS);
 
 // --- Building blocks -------------------------------------------------------
 
 const range = z.object({ min: z.number(), max: z.number() });
 const id = z.string().min(1);
+const isoDate = z.string().refine(isValidIsoDate, "must be a valid YYYY-MM-DD date");
+const positiveInt = z.number().int().positive();
+
+/** "MM-DD" with a real month and day (Feb 29 allowed). */
+function isValidMonthDay(s: string): boolean {
+  const m = /^(\d{2})-(\d{2})$/.exec(s);
+  if (!m) return false;
+  const [month, day] = [Number(m[1]), Number(m[2])];
+  return month >= 1 && month <= 12 && day >= 1 && day <= new Date(Date.UTC(2024, month, 0)).getUTCDate();
+}
+const monthDay = z.string().refine(isValidMonthDay, "must be a valid MM-DD date").nullable();
+const bedDimension = z.number().int().min(MIN_BED_DIMENSION).max(MAX_BED_DIMENSION);
 
 // --- Plant -----------------------------------------------------------------
 
@@ -239,8 +160,8 @@ const gardenProfileSchema = z.object({
   setting: gardenSetting,
   climate: z.object({
     hardinessZone: z.number(),
-    lastFrost: z.string().nullable(),
-    firstFrost: z.string().nullable(),
+    lastFrost: monthDay,
+    firstFrost: monthDay,
     summerHighF: z.number(),
     winterLowF: z.number(),
     humidity,
@@ -269,9 +190,9 @@ const bedSchema = z.object({
   id,
   name: z.string(),
   kind: bedKind,
-  columns: z.number().int().min(1),
-  rows: z.number().int().min(1),
-  cellSizeInches: z.number(),
+  columns: bedDimension,
+  rows: bedDimension,
+  cellSizeInches: z.number().positive(),
   sun: sunExposure,
   placements: z.array(
     z.object({ plantId: z.string(), x: z.number().int().min(0), y: z.number().int().min(0) }),
@@ -282,8 +203,8 @@ const plantingSchema = z.object({
   id,
   plantId: z.string(),
   bedId: z.string().optional(),
-  quantity: z.number(),
-  plantedOn: z.string(),
+  quantity: positiveInt,
+  plantedOn: isoDate,
   status: plantingStatus,
   inContainer: z.boolean(),
   notes: z.string().optional(),
@@ -293,22 +214,22 @@ const careLogEntrySchema = z.object({
   id,
   plantingId: z.string().optional(),
   type: careType,
-  date: z.string(),
+  date: isoDate,
   note: z.string().optional(),
 });
 
 const reminderSchema = z.object({
   id,
   title: z.string(),
-  dueDate: z.string(),
-  repeatDays: z.number().optional(),
+  dueDate: isoDate,
+  repeatDays: positiveInt.optional(),
   done: z.boolean(),
   plantingId: z.string().optional(),
 });
 
 const journalEntrySchema = z.object({
   id,
-  date: z.string(),
+  date: isoDate,
   title: z.string(),
   text: z.string(),
   plantingId: z.string().optional(),

@@ -1,4 +1,5 @@
 import { isPetSafe } from "./safety";
+import { zoneSupports } from "./zones";
 import type {
   Allergen,
   Difficulty,
@@ -23,6 +24,7 @@ export interface PlantFilters {
   edibleOnly?: boolean;
   petSafeFor?: Pet[];
   excludeAllergens?: Allergen[];
+  /** USDA hardiness zone; only perennials are excluded by it (see `zoneSupports`). */
   zone?: number;
   goals?: GardenGoal[];
 }
@@ -53,7 +55,7 @@ function buildPredicates(f: PlantFilters): Predicate[] {
   if (f.edibleOnly) predicates.push((p) => p.edible);
   if (isActive(f.petSafeFor)) predicates.push((p) => isPetSafe(p, f.petSafeFor!));
   if (isActive(f.excludeAllergens)) predicates.push((p) => !p.allergens.some((a) => f.excludeAllergens!.includes(a)));
-  if (f.zone !== undefined) predicates.push((p) => f.zone! >= p.hardinessZones.min && f.zone! <= p.hardinessZones.max);
+  if (f.zone !== undefined) predicates.push((p) => zoneSupports(p, f.zone!));
   if (isActive(f.goals)) predicates.push((p) => p.goals.some((g) => f.goals!.includes(g)));
   return predicates;
 }

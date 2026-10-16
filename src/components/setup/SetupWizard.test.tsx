@@ -1,10 +1,13 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ZONES } from "@/data/zones";
+import { climateFromZone } from "@/domain/climate";
 import { createDefaultProfile } from "@/domain/defaults";
 import { makeAppData, makeGarden } from "@/test/fixtures";
 import { renderWithAppData } from "@/test/render";
 import { SetupWizard } from "./SetupWizard";
+import { toDisplayTemp } from "./temperature";
 
 vi.mock("@/data/plants", () => ({ BUILTIN_PLANTS: [] }));
 
@@ -134,7 +137,7 @@ describe("SetupWizard climate step", () => {
     expect(screen.getByLabelText("Last spring frost day")).toHaveValue("10");
     expect(screen.getByLabelText("First fall frost month")).toHaveValue("10");
     expect(screen.getByLabelText("Typical winter low (°F)")).toHaveValue(-20);
-    expect(screen.getByLabelText("Typical summer high (°F)")).toHaveValue(83);
+    expect(screen.getByLabelText("Typical summer high (°F)")).toHaveValue(climateFromZone(5, ZONES).summerHighF);
 
     await user.selectOptions(screen.getByLabelText("Last spring frost month"), "06");
     expect(screen.getByLabelText("Last spring frost month")).toHaveValue("06");
@@ -152,7 +155,7 @@ describe("SetupWizard climate step", () => {
     const data = makeAppData([], { settings: { temperatureUnit: "C" } });
     const { user, getData } = await toClimate({ data });
     const low = screen.getByLabelText("Typical winter low (°C)");
-    expect(low).toHaveValue(-15); // zone 7 default 0°F
+    expect(low).toHaveValue(toDisplayTemp(createDefaultProfile().climate.winterLowF, "C"));
     await user.clear(low);
     await user.type(low, "-20");
     expect(low).toHaveValue(-20);

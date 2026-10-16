@@ -55,7 +55,7 @@ describe("careContextFor", () => {
     const outdoor = createDefaultProfile();
     outdoor.climate.humidity = "high";
     outdoor.indoor.humidity = "low";
-    expect(careContextFor(outdoor)).toEqual({ setting: "outdoor", summerHighF: 85, humidity: "high" });
+    expect(careContextFor(outdoor)).toEqual({ setting: "outdoor", summerHighF: outdoor.climate.summerHighF, humidity: "high" });
     expect(careContextFor({ ...outdoor, setting: "indoor" }).humidity).toBe("low");
   });
 });

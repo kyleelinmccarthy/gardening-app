@@ -163,8 +163,10 @@ describe("plantsPerCell", () => {
     expect(plantsPerCell(makePlant({ spacingInches: 6 }), cell)).toEqual({ perCell: 4, cellsNeeded: 1 });
   });
 
-  it("floors fractional counts", () => {
-    expect(plantsPerCell(makePlant({ spacingInches: 5 }), cell)).toEqual({ perCell: 5, cellsNeeded: 1 }); // 5.76
+  it("lays plants out on a grid, so non-integer ratios do not overcount", () => {
+    expect(plantsPerCell(makePlant({ spacingInches: 5 }), cell)).toEqual({ perCell: 4, cellsNeeded: 1 }); // 2 per row, not 5.76
+    expect(plantsPerCell(makePlant({ spacingInches: 8 }), cell)).toEqual({ perCell: 1, cellsNeeded: 1 }); // 1 per row, not 2.25
+    expect(plantsPerCell(makePlant({ spacingInches: 7 }), cell)).toEqual({ perCell: 1, cellsNeeded: 1 });
   });
 
   it("gives one plant per cell when spacing equals the cell", () => {

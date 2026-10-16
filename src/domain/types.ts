@@ -250,6 +250,189 @@ export type FertilizerId =
 export type InsectRole = "pest" | "beneficial" | "pollinator" | "animal-pest";
 
 // ---------------------------------------------------------------------------
+// Exhaustive value lists
+// ---------------------------------------------------------------------------
+
+/**
+ * Builds the value list of a string union. Omitting a member of `T` is a
+ * compile error, so these lists can never drift from the union they mirror.
+ */
+const exhaustiveList =
+  <T extends string>() =>
+  <const L extends readonly T[]>(list: L & ([Exclude<T, L[number]>] extends [never] ? unknown : never)): readonly T[] =>
+    list;
+
+export const TOOL_IDS: readonly ToolId[] = exhaustiveList<ToolId>()([
+  "hand-trowel",
+  "pruners",
+  "garden-gloves",
+  "watering-can",
+  "garden-hose",
+  "drip-irrigation",
+  "soaker-hose",
+  "spade",
+  "garden-fork",
+  "hoe",
+  "rake",
+  "wheelbarrow",
+  "trellis",
+  "stakes",
+  "tomato-cage",
+  "raised-bed",
+  "containers",
+  "hanging-basket",
+  "grow-light",
+  "heat-mat",
+  "seed-trays",
+  "humidity-dome",
+  "humidifier",
+  "pebble-tray",
+  "greenhouse",
+  "cold-frame",
+  "row-cover",
+  "bird-netting",
+  "mulch",
+  "compost-bin",
+  "soil-test-kit",
+  "moisture-meter",
+  "spray-bottle",
+  "thermometer",
+]);
+
+export const INSECT_IDS: readonly InsectId[] = exhaustiveList<InsectId>()([
+  "aphids",
+  "spider-mites",
+  "whiteflies",
+  "fungus-gnats",
+  "mealybugs",
+  "scale-insects",
+  "thrips",
+  "slugs-snails",
+  "cabbage-worms",
+  "tomato-hornworm",
+  "cucumber-beetles",
+  "squash-vine-borer",
+  "squash-bugs",
+  "flea-beetles",
+  "colorado-potato-beetle",
+  "japanese-beetles",
+  "carrot-rust-fly",
+  "leaf-miners",
+  "cutworms",
+  "corn-earworm",
+  "mexican-bean-beetle",
+  "onion-maggots",
+  "earwigs",
+  "deer",
+  "rabbits",
+  "birds",
+  "squirrels",
+  "honeybees",
+  "native-bees",
+  "bumblebees",
+  "butterflies",
+  "moths",
+  "hummingbirds",
+  "ladybugs",
+  "lacewings",
+  "hoverflies",
+  "parasitic-wasps",
+  "ground-beetles",
+  "praying-mantis",
+  "earthworms",
+]);
+
+export const FERTILIZER_IDS: readonly FertilizerId[] = exhaustiveList<FertilizerId>()([
+  "compost",
+  "aged-manure",
+  "balanced-10-10-10",
+  "high-nitrogen",
+  "bloom-booster",
+  "fish-emulsion",
+  "bone-meal",
+  "blood-meal",
+  "kelp-seaweed",
+  "worm-castings",
+  "tomato-feed",
+  "acid-fertilizer",
+  "cactus-fertilizer",
+  "orchid-fertilizer",
+  "houseplant-liquid",
+  "slow-release-granules",
+  "epsom-salt",
+  "none",
+]);
+
+export const CARE_TYPES: readonly CareType[] = exhaustiveList<CareType>()([
+  "water",
+  "fertilize",
+  "prune",
+  "harvest",
+  "inspect-pests",
+  "mulch",
+  "repot",
+  "custom",
+]);
+
+export const BED_KINDS: readonly BedKind[] = exhaustiveList<BedKind>()([
+  "raised-bed",
+  "in-ground",
+  "container",
+  "windowsill",
+  "shelf",
+]);
+
+export const PLANTING_STATUSES: readonly PlantingStatus[] = exhaustiveList<PlantingStatus>()([
+  "planned",
+  "growing",
+  "harvested",
+  "removed",
+]);
+
+export const DRAINAGES: readonly Drainage[] = exhaustiveList<Drainage>()([
+  "well-drained",
+  "moist",
+  "wet",
+]);
+
+export const LIFE_CYCLES: readonly LifeCycle[] = exhaustiveList<LifeCycle>()([
+  "annual",
+  "biennial",
+  "perennial",
+]);
+
+export const FEEDING_LEVELS: readonly FeedingLevel[] = exhaustiveList<FeedingLevel>()([
+  "light",
+  "moderate",
+  "heavy",
+]);
+
+export const GARDEN_SETTINGS: readonly GardenSetting[] = exhaustiveList<GardenSetting>()([
+  "indoor",
+  "outdoor",
+]);
+
+export const TEMPERATURE_UNITS: readonly TemperatureUnit[] = exhaustiveList<TemperatureUnit>()([
+  "F",
+  "C",
+]);
+
+export const CALENDAR_EVENT_TYPES: readonly CalendarEventType[] = exhaustiveList<CalendarEventType>()([
+  "start-indoors",
+  "transplant",
+  "direct-sow",
+  "fall-sow",
+  "harvest",
+]);
+
+export const VERDICTS: readonly Verdict[] = exhaustiveList<Verdict>()([
+  "great",
+  "good",
+  "possible",
+  "not-recommended",
+]);
+
+// ---------------------------------------------------------------------------
 // Plants
 // ---------------------------------------------------------------------------
 

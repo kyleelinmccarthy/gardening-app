@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event";
 import { render, screen } from "@testing-library/react";
 import { AppNav } from "./AppNav";
 import { NAV_ITEMS } from "./nav-items";
@@ -43,5 +44,28 @@ describe("AppNav", () => {
     usePathname.mockReturnValue("/");
     render(<AppNav />);
     expect(screen.getByText("Menu")).toBeInTheDocument();
+  });
+
+  it("closes the mobile menu on Escape and returns focus to the toggle", async () => {
+    usePathname.mockReturnValue("/");
+    const user = userEvent.setup();
+    render(<AppNav />);
+    const summary = screen.getByText("Menu").closest("summary")!;
+    const details = summary.closest("details")!;
+    await user.click(summary);
+    expect(details).toHaveAttribute("open");
+    await user.keyboard("{Escape}");
+    expect(details).not.toHaveAttribute("open");
+    expect(summary).toHaveFocus();
+  });
+
+  it("ignores Escape while the mobile menu is closed", async () => {
+    usePathname.mockReturnValue("/");
+    const user = userEvent.setup();
+    render(<AppNav />);
+    const summary = screen.getByText("Menu").closest("summary")!;
+    summary.focus();
+    await user.keyboard("{Escape}");
+    expect(summary.closest("details")).not.toHaveAttribute("open");
   });
 });

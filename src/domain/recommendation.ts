@@ -1,4 +1,7 @@
+import { frostFreeDays } from "./climate";
 import { getSafetyIssues } from "./safety";
+import { humanizeId } from "./text";
+import { needsWinterHardiness, zoneSupports } from "./zones";
 import type { GardenProfile, Plant, Reason, Recommendation, ToolId, Verdict } from "./types";
 import { INDOOR_LIGHTS, SUN_EXPOSURES } from "./types";
 
@@ -46,24 +49,7 @@ export const SCORE_CONFIG = {
 
 const W = SCORE_CONFIG.weights;
 
-/** Days of the year that each month starts after (non-leap). */
-const DAYS_BEFORE_MONTH = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
-const DAYS_IN_YEAR = 365;
-
-function dayOfYear(monthDay: string): number {
-  const [month, day] = monthDay.split("-").map(Number);
-  return DAYS_BEFORE_MONTH[month - 1] + day;
-}
-
-/**
- * Days between the last spring frost and first fall frost ("MM-DD", non-leap).
- * Returns 365 when either date is null (frost-free climate).
- */
-export function frostFreeDays(lastFrost: string | null, firstFrost: string | null): number {
-  if (lastFrost === null || firstFrost === null) return DAYS_IN_YEAR;
-  const diff = dayOfYear(firstFrost) - dayOfYear(lastFrost);
-  return diff >= 0 ? diff : diff + DAYS_IN_YEAR;
-}
+export { frostFreeDays };
 
 // ---------------------------------------------------------------------------
 // Rule plumbing
@@ -89,7 +75,7 @@ const warning = (delta: number, topic: Reason["topic"], message: string) => outc
 const blocker = (topic: Reason["topic"], message: string) => outcome(W.blocker, "blocker", topic, message);
 
 const hasTool = (profile: GardenProfile, ...tools: ToolId[]) => tools.some((t) => profile.tools.includes(t));
-const humanList = (items: string[]) => items.map((i) => i.replace(/-/g, " ")).join(", ");
+const humanList = (items: string[]) => items.map(humanizeId).join(", ");
 const isOutdoor = (profile: GardenProfile) => profile.setting === "outdoor";
 
 /** Smallest number of steps between `value` and any accepted value on an ordered scale. */
@@ -115,7 +101,7 @@ const settingRule: Rule = (plant, profile) =>
 const sunRule: Rule = (plant, profile) => {
   if (!isOutdoor(profile)) return NOTHING;
   const { distance } = nearestStep(SUN_EXPOSURES, profile.sunExposure, plant.sun);
-  const label = profile.sunExposure.replace(/-/g, " ");
+  const label = humanizeId(profile.sunExposure);
   if (distance === 0) return positive(W.sunMatch, "sun", `Thrives in ${label}`);
   if (distance === 1) return warning(W.sunAdjacent, "sun", `Prefers ${humanList(plant.sun)}; your ${label} is close but not ideal`);
   return blocker("sun", `Needs ${humanList(plant.sun)}, but your garden gets ${label}`);
@@ -124,7 +110,7 @@ const sunRule: Rule = (plant, profile) => {
 const lightRule: Rule = (plant, profile) => {
   if (isOutdoor(profile) || !plant.indoorLight?.length) return NOTHING;
   const { distance, below } = nearestStep(INDOOR_LIGHTS, profile.indoor.light, plant.indoorLight);
-  const label = profile.indoor.light.replace(/-/g, " ");
+  const label = humanizeId(profile.indoor.light);
   if (distance === 0) return positive(W.lightMatch, "light", `Your ${label} light suits it`);
   const growLight = hasTool(profile, "grow-light");
   if (distance === 1) {
@@ -147,12 +133,12 @@ const lightRule: Rule = (plant, profile) => {
   );
 };
 
-/** Perennials and biennials must survive the winter outdoors. */
+/** Perennials must survive the winter outdoors; annuals and biennials are grown as one-season crops. */
 const hardinessRule: Rule = (plant, profile) => {
-  if (!isOutdoor(profile) || plant.lifeCycle === "annual") return NOTHING;
+  if (!isOutdoor(profile) || !needsWinterHardiness(plant)) return NOTHING;
   const zone = profile.climate.hardinessZone;
   const { min, max } = plant.hardinessZones;
-  if (zone >= min && zone <= max) return positive(W.zoneMatch, "zone", `Hardy in your zone ${zone}`);
+  if (zoneSupports(plant, zone)) return positive(W.zoneMatch, "zone", `Hardy in your zone ${zone}`);
   if (zone > max) {
     return warning(W.zoneStretch, "zone", `Zone ${zone} is warmer than its range (${min}–${max}); it may struggle without winter chill`);
   }
@@ -175,15 +161,28 @@ const heatRule: Rule = (plant, profile) => {
     : NOTHING;
 };
 
+/** Crops sown only in fall (garlic, overwintered onions) grow through winter, so the spring frost-free season does not limit them. */
+const isOverwintering = ({ planting }: Plant) =>
+  planting.fallSowWeeksBeforeFirstFrost !== undefined &&
+  planting.startIndoorsWeeks === undefined &&
+  planting.transplantWeeks === undefined &&
+  planting.directSowWeeks === undefined;
+
 const seasonRule: Rule = (plant, profile) => {
-  if (!isOutdoor(profile) || plant.lifeCycle !== "annual" || !plant.daysToMaturity) return NOTHING;
+  if (!isOutdoor(profile) || needsWinterHardiness(plant) || isOverwintering(plant) || !plant.daysToMaturity) {
+    return NOTHING;
+  }
   const season = frostFreeDays(profile.climate.lastFrost, profile.climate.firstFrost);
   const needed = plant.daysToMaturity.min;
   if (needed <= season) return NOTHING;
   const summary = `needs ${needed}+ days to mature but your frost-free season is about ${season}`;
   if (hasTool(profile, "greenhouse")) return positive(0, "zone", `Your greenhouse extends the season (${summary})`);
   if (hasTool(profile, "cold-frame")) return positive(0, "zone", `Your cold frame extends the season (${summary})`);
-  return warning(W.shortSeason, "zone", `Short season: ${summary}; start seeds indoors or use a greenhouse`);
+  const advice =
+    plant.planting.startIndoorsWeeks === undefined
+      ? "start seeds indoors or use a greenhouse"
+      : "use transplants, choose early varieties or use a greenhouse";
+  return warning(W.shortSeason, "zone", `Short season: ${summary}; ${advice}`);
 };
 
 const indoorTemperatureRule: Rule = (plant, profile) => {
@@ -206,9 +205,15 @@ const humidityRule: Rule = (plant, profile) => {
   return warning(W.humidityMismatch, "humidity", "Loves humidity but your air is dry; consider a humidifier or pebble tray");
 };
 
+/** Indoor gardening is always container gardening, so this applies indoors even without `containersOnly`. */
 const containerRule: Rule = (plant, profile) => {
   if (!profile.containersOnly && isOutdoor(profile)) return NOTHING;
-  if (!plant.container.suitable) return blocker("container", "Not suited to container growing");
+  if (!plant.container.suitable) {
+    return blocker(
+      "container",
+      isOutdoor(profile) ? "Not suited to container growing" : "Not suited to container growing, which is how all indoor plants are grown",
+    );
+  }
   const gallons = plant.container.minGallons;
   return positive(
     W.containerFit,

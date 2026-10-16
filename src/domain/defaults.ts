@@ -1,18 +1,15 @@
+import { ZONES } from "@/data/zones";
 import { createId } from "@/lib/id";
+import { climateFromZone } from "./climate";
 import type { Bed, BedKind, Garden, GardenProfile, SunExposure } from "./types";
 
-/** A beginner-friendly outdoor profile (USDA zone 7); override any top-level field. */
+const DEFAULT_ZONE = 7;
+
+/** A beginner-friendly outdoor profile (USDA zone 7, climate derived from the zone data); override any top-level field. */
 export function createDefaultProfile(overrides: Partial<GardenProfile> = {}): GardenProfile {
   return {
     setting: "outdoor",
-    climate: {
-      hardinessZone: 7,
-      lastFrost: "04-15",
-      firstFrost: "10-15",
-      summerHighF: 85,
-      winterLowF: 5,
-      humidity: "average",
-    },
+    climate: climateFromZone(DEFAULT_ZONE, ZONES),
     indoor: { light: "bright-indirect", averageTempF: 70, humidity: "average" },
     sunExposure: "full-sun",
     soilType: "loam",

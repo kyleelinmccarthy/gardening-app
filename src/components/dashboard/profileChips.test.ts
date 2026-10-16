@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { formatMonthDay } from "@/components/setup/format";
+import { formatTemperature } from "@/domain/climate";
 import { createDefaultProfile } from "@/domain/defaults";
 import { makeGarden } from "@/test/fixtures";
 import { profileChips } from "./profileChips";
@@ -7,11 +9,12 @@ const labels = (g: ReturnType<typeof makeGarden>, unit: "F" | "C" = "F") => prof
 
 describe("profileChips", () => {
   it("summarises an outdoor garden", () => {
+    const { climate } = makeGarden().profile;
     expect(labels(makeGarden())).toEqual([
       "Outdoor",
-      "Zone 7",
-      "Frost Apr 15 to Oct 15",
-      "Winter low 5°F",
+      `Zone ${climate.hardinessZone}`,
+      `Frost ${formatMonthDay(climate.lastFrost)} to ${formatMonthDay(climate.firstFrost)}`,
+      `Winter low ${formatTemperature(climate.winterLowF, "F")}`,
       "Full sun (6+ h)",
     ]);
   });

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { KeyboardEvent } from "react";
 import { cn } from "@/lib/cn";
 import { NAV_ITEMS } from "./nav-items";
 
@@ -36,6 +37,14 @@ function NavLinks({ pathname, vertical }: { pathname: string; vertical?: boolean
   );
 }
 
+/** Escape closes the open mobile menu and returns focus to its toggle. */
+function closeOnEscape(e: KeyboardEvent<HTMLDetailsElement>) {
+  const details = e.currentTarget;
+  if (e.key !== "Escape" || !details.open) return;
+  details.open = false;
+  details.querySelector("summary")?.focus();
+}
+
 /**
  * Main navigation. Desktop: inline links. Mobile: a `<details>` disclosure
  * that re-mounts (and so closes) whenever the route changes.
@@ -47,7 +56,7 @@ export function AppNav() {
       <nav aria-label="Main" className="hidden md:block">
         <NavLinks pathname={pathname} />
       </nav>
-      <details key={pathname} className="group relative md:hidden">
+      <details key={pathname} onKeyDown={closeOnEscape} className="group relative md:hidden">
         <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium [&::-webkit-details-marker]:hidden">
           <span aria-hidden="true">☰</span> Menu
         </summary>

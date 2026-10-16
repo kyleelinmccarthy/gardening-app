@@ -446,9 +446,9 @@ export const VEGETABLES: Plant[] = [
       horse: "moderate",
       bird: "moderate",
       rabbit: "moderate",
-      human: "moderate",
+      human: "mild",
       notes:
-        "Green skin and tubers, sprouts, flowers, berries and leaves contain solanine and chaconine: vomiting, diarrhea, drooling, confusion and weakness in pets, horses and people. Cooked, peeled, properly stored (dark, cool) tubers are safe; discard green or sprouted parts.",
+        "Green skin and tubers, sprouts, flowers, berries and leaves contain solanine and chaconine: vomiting, diarrhea, drooling, confusion and weakness in pets, horses and people. Cooked, peeled, properly stored (dark, cool) tubers are safe; discard green or sprouted parts and keep children away from the plant's leaves, berries and green tubers.",
     },
     allergens: ["nightshade", "contact-dermatitis"],
     allergyNotes:
@@ -861,14 +861,14 @@ export const VEGETABLES: Plant[] = [
     pests: ["onion-maggots", "thrips", "cutworms"],
     repels: ["carrot-rust-fly", "aphids", "rabbits", "deer"],
     toxicity: {
-      cat: "severe",
+      cat: "moderate",
       dog: "moderate",
       horse: "moderate",
       bird: "moderate",
       rabbit: "moderate",
       human: "non-toxic",
       notes:
-        "All parts (raw, cooked, powdered) contain N-propyl disulfide, which damages red blood cells: vomiting, diarrhea, pale gums, weakness, red urine and anemia, sometimes delayed 1–5 days. Cats are most sensitive. Safe for people.",
+        "All parts (raw, cooked, powdered) contain N-propyl disulfide, which damages red blood cells: vomiting, diarrhea, pale gums, weakness, red urine and anemia, sometimes delayed 1–5 days. Cats are more sensitive than dogs, and effects depend on the dose eaten. Safe for people.",
     },
     allergens: ["contact-dermatitis", "strong-fragrance"],
     allergyNotes: "Onion sap can irritate skin and eyes; some people have true onion allergy. Cutting releases a lachrymatory compound.",
@@ -934,14 +934,14 @@ export const VEGETABLES: Plant[] = [
     pests: ["thrips", "onion-maggots"],
     repels: ["aphids", "spider-mites", "japanese-beetles", "rabbits", "deer"],
     toxicity: {
-      cat: "severe",
+      cat: "moderate",
       dog: "moderate",
       horse: "moderate",
       bird: "moderate",
       rabbit: "moderate",
       human: "non-toxic",
       notes:
-        "All parts (raw, cooked, powdered) cause oxidative damage to red blood cells: vomiting, diarrhea, drooling, pale gums, weakness, anemia. Cats are more susceptible than dogs. Garlic is safe for people in normal food amounts.",
+        "All parts (raw, cooked, powdered) cause oxidative damage to red blood cells: vomiting, diarrhea, drooling, pale gums, weakness, anemia. Cats are more susceptible than dogs, and garlic is roughly five times more potent than onion, so even small amounts add up; effects are dose-dependent. Garlic is safe for people in normal food amounts.",
     },
     allergens: ["contact-dermatitis", "strong-fragrance"],
     allergyNotes: "Handling raw garlic can cause contact dermatitis (fingertip rash); some people have garlic allergy or sensitivity to the odor.",
@@ -1005,14 +1005,14 @@ export const VEGETABLES: Plant[] = [
     pests: ["thrips", "onion-maggots", "cutworms", "slugs-snails"],
     repels: ["carrot-rust-fly", "rabbits", "deer"],
     toxicity: {
-      cat: "severe",
+      cat: "moderate",
       dog: "moderate",
       horse: "moderate",
       bird: "moderate",
       rabbit: "moderate",
       human: "non-toxic",
       notes:
-        "All parts contain organosulfur compounds that damage red blood cells in cats, dogs and other animals: vomiting, diarrhea, lethargy, pale gums and anemia, sometimes delayed days. Cats are most sensitive. Safe for people.",
+        "All parts contain organosulfur compounds that damage red blood cells in cats, dogs and other animals: vomiting, diarrhea, lethargy, pale gums and anemia, sometimes delayed days. Cats are more sensitive than dogs, and effects depend on the dose eaten. Safe for people.",
     },
     allergens: ["contact-dermatitis", "strong-fragrance"],
     allergyNotes: "Can cause contact dermatitis or allergic reaction in people allergic to onion/garlic.",
@@ -1978,7 +1978,7 @@ export const VEGETABLES: Plant[] = [
       horse: "mild",
       bird: "moderate",
       rabbit: "mild",
-      human: "moderate",
+      human: "mild",
       notes:
         "Raw or undercooked beans and pods contain phytohaemagglutinin (a lectin): nausea, vomiting and diarrhea in people and pets, serious in large amounts. Cook beans thoroughly (boiled, not slow-cooked at low temperature). Cooked snap beans are safe. Birds are particularly sensitive to raw beans.",
     },
@@ -2050,7 +2050,7 @@ export const VEGETABLES: Plant[] = [
       horse: "mild",
       bird: "moderate",
       rabbit: "mild",
-      human: "moderate",
+      human: "mild",
       notes:
         "Raw or undercooked beans and pods contain phytohaemagglutinin (lectin): nausea, vomiting, diarrhea, severe in large amounts. Scarlet runner and dry beans must be boiled thoroughly. Properly cooked beans are safe. Birds are especially sensitive to raw beans.",
     },
