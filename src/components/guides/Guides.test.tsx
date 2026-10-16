@@ -6,9 +6,7 @@ import { renderWithAppData } from "@/test/render";
 import { Guides } from "./Guides";
 
 vi.mock("@/data/plants", async () => {
-  const { makeTestPlants } = await vi.importActual<typeof import("@/components/plants/test-plants")>(
-    "@/components/plants/test-plants",
-  );
+  const { makeTestPlants } = await vi.importActual<typeof import("@/test/fixtures")>("@/test/fixtures");
   return { BUILTIN_PLANTS: makeTestPlants() };
 });
 

@@ -4,6 +4,9 @@ import {
   addWeeks,
   diffDays,
   formatDisplayDate,
+  formatMonthDay,
+  MONTH_NAMES_LONG,
+  MONTH_NAMES_SHORT,
   isValidIsoDate,
   monthDayToIso,
   parseIsoDate,
@@ -138,5 +141,30 @@ describe("formatDisplayDate", () => {
 
   it("can use long month names", () => {
     expect(formatDisplayDate("2025-09-05", { month: "long" })).toBe("September 5");
+  });
+});
+
+describe("month names", () => {
+  it("lists twelve long and short names, with short being the first three letters", () => {
+    expect(MONTH_NAMES_LONG).toHaveLength(12);
+    expect(MONTH_NAMES_LONG[0]).toBe("January");
+    expect(MONTH_NAMES_LONG[11]).toBe("December");
+    expect(MONTH_NAMES_SHORT).toEqual(MONTH_NAMES_LONG.map((n) => n.slice(0, 3)));
+  });
+});
+
+describe("formatMonthDay", () => {
+  it("formats MM-DD as short month and day", () => {
+    expect(formatMonthDay("04-15")).toBe("Apr 15");
+    expect(formatMonthDay("12-01")).toBe("Dec 1");
+  });
+
+  it("keeps February 29th valid", () => {
+    expect(formatMonthDay("02-29")).toBe("Feb 29");
+  });
+
+  it("returns impossible values unchanged instead of throwing", () => {
+    expect(formatMonthDay("02-31")).toBe("02-31");
+    expect(formatMonthDay("nonsense")).toBe("nonsense");
   });
 });

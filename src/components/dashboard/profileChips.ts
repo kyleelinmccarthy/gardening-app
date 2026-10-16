@@ -1,5 +1,5 @@
-import { formatMonthDay } from "@/components/setup/format";
 import { formatTemperature } from "@/domain/climate";
+import { formatMonthDay } from "@/domain/dates";
 import type { Garden, TemperatureUnit } from "@/domain/types";
 import { ALLERGEN_LABELS, INDOOR_LIGHT_LABELS, PET_EMOJI, PET_LABELS, SETTING_LABELS, SUN_LABELS } from "@/lib/labels";
 
@@ -8,6 +8,8 @@ export interface ProfileChip {
   label: string;
   tone: "neutral" | "info" | "warning";
 }
+
+const frostLabel = (md: string | null): string => (md === null ? "none" : formatMonthDay(md));
 
 /** Short badges summarising a garden profile for the dashboard header. */
 export function profileChips(garden: Garden, unit: TemperatureUnit): ProfileChip[] {
@@ -21,7 +23,7 @@ export function profileChips(garden: Garden, unit: TemperatureUnit): ProfileChip
       label:
         climate.lastFrost === null && climate.firstFrost === null
           ? "Frost-free"
-          : `Frost ${formatMonthDay(climate.lastFrost)} to ${formatMonthDay(climate.firstFrost)}`,
+          : `Frost ${frostLabel(climate.lastFrost)} to ${frostLabel(climate.firstFrost)}`,
       tone: "neutral",
     },
     { key: "low", label: `Winter low ${formatTemperature(climate.winterLowF, unit)}`, tone: "neutral" },

@@ -3,6 +3,7 @@
 import { useId } from "react";
 import { Button } from "@/components/ui";
 import { todayIso } from "@/domain/dates";
+import { defaultPlanting } from "@/domain/plantings";
 import { createId } from "@/lib/id";
 import { useAppData } from "@/state/AppDataProvider";
 
@@ -48,20 +49,12 @@ export function AddToGardenButton({ plantId, size = "sm" }: AddToGardenButtonPro
     );
   }
 
-  const { profile } = activeGarden;
   function add() {
     if (!activeGarden) return;
     dispatch({
       type: "planting/add",
       gardenId: activeGarden.id,
-      planting: {
-        id: createId("planting"),
-        plantId,
-        quantity: 1,
-        plantedOn: todayIso(),
-        status: "planned",
-        inContainer: profile.containersOnly || profile.setting === "indoor",
-      },
+      planting: defaultPlanting(plantId, activeGarden.profile, todayIso(), createId("planting")),
     });
   }
 

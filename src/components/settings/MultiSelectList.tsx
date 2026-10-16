@@ -1,8 +1,7 @@
 "use client";
 
 import { memo, useId, useState } from "react";
-import { Checkbox } from "@/components/setup/Checkbox";
-import { Button, TextInput } from "@/components/ui";
+import { Button, Checkbox, TextInput } from "@/components/ui";
 
 export interface MultiSelectListProps<T extends string> {
   /** Passed back to `onChange` so one stable handler can serve many lists (keeps `memo` effective). */
@@ -64,7 +63,7 @@ function MultiSelectListImpl<T extends string>({ name, label, options, value, on
             {visible.length === 0 && <li className="text-sm text-muted">No matches.</li>}
             {visible.map((o) => (
               <li key={o.value}>
-                <Checkbox label={o.label} checked={value.includes(o.value)} onChange={(c) => toggle(o.value, c)} />
+                <Checkbox label={o.label} checked={value.includes(o.value)} onChange={(e) => toggle(o.value, e.target.checked)} />
               </li>
             ))}
           </ul>

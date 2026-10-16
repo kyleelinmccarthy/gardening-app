@@ -2,12 +2,11 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ZONES } from "@/data/zones";
-import { climateFromZone } from "@/domain/climate";
+import { climateFromZone, toDisplayTemp } from "@/domain/climate";
 import { createDefaultProfile } from "@/domain/defaults";
 import { makeAppData, makeGarden } from "@/test/fixtures";
 import { renderWithAppData } from "@/test/render";
 import { SetupWizard } from "./SetupWizard";
-import { toDisplayTemp } from "./temperature";
 
 vi.mock("@/data/plants", () => ({ BUILTIN_PLANTS: [] }));
 
@@ -181,6 +180,15 @@ describe("SetupWizard climate step", () => {
     await user.click(screen.getByRole("button", { name: "Look up zone" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/couldn't find/i);
     expect(screen.getByLabelText("USDA hardiness zone")).toHaveValue("6");
+  });
+
+  it("shows an error and blocks continuing when a temperature is cleared", async () => {
+    const { user } = await toClimate();
+    await user.clear(screen.getByLabelText("Typical summer high (°F)"));
+    await next(user);
+    expect(screen.getByRole("alert")).toHaveTextContent("Enter a summer high temperature.");
+    expect(screen.getByLabelText("Typical summer high (°F)")).toHaveValue(null);
+    expect(screen.getByRole("heading", { level: 2, name: /climate/i })).toBeInTheDocument();
   });
 
   it("rejects an impossible frost combination of temperatures", async () => {

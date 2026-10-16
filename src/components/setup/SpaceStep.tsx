@@ -1,11 +1,10 @@
 "use client";
 
-import { Field, Select } from "@/components/ui";
+import { Checkbox, Field, Select } from "@/components/ui";
 import { SOILS } from "@/data/soils";
 import { SOIL_TYPES, SPACE_SIZES, SUN_EXPOSURES, type SoilType, type SpaceSize, type SunExposure } from "@/domain/types";
 import { SOIL_LABELS, SPACE_LABELS, SUN_LABELS, toOptions } from "@/lib/labels";
 import { ChoiceCards } from "./ChoiceCards";
-import { Checkbox } from "./Checkbox";
 import type { StepProps } from "./step-props";
 
 const SUN_OPTIONS = toOptions(SUN_LABELS, SUN_EXPOSURES);
@@ -56,7 +55,7 @@ export function SpaceStep({ state, dispatch }: StepProps) {
           label="Containers only"
           hint="Balcony, patio or deck: no in-ground planting."
           checked={state.containersOnly}
-          onChange={(containersOnly) => dispatch({ type: "patch", changes: { containersOnly } })}
+          onChange={(e) => dispatch({ type: "patch", changes: { containersOnly: e.target.checked } })}
         />
       )}
     </div>

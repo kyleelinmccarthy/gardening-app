@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cToF, climateFromZone, fToC, formatTemperature, frostFreeDays } from "./climate";
+import { cToF, climateFromZone, fToC, formatTemperature, frostFreeDays, fromDisplayTemp, toDisplayTemp } from "./climate";
 import type { ZoneInfo } from "./types";
 
 const zones: ZoneInfo[] = [
@@ -90,5 +90,26 @@ describe("climateFromZone", () => {
 
   it("throws with no zones", () => {
     expect(() => climateFromZone(6, [])).toThrow();
+  });
+});
+
+describe("display temperature helpers", () => {
+  it("round-trips whole degrees", () => {
+    for (let c = -40; c <= 45; c++) expect(toDisplayTemp(fromDisplayTemp(c, "C"), "C")).toBe(c);
+  });
+
+  it("is the identity in °F", () => {
+    expect(toDisplayTemp(72, "F")).toBe(72);
+    expect(fromDisplayTemp(72, "F")).toBe(72);
+  });
+
+  it("converts to and from whole °C", () => {
+    expect(toDisplayTemp(68, "C")).toBe(20);
+    expect(fromDisplayTemp(25, "C")).toBe(77);
+  });
+
+  it("never shows negative zero", () => {
+    expect(Object.is(toDisplayTemp(32, "C"), 0)).toBe(true);
+    expect(Object.is(toDisplayTemp(31.9, "C"), 0)).toBe(true);
   });
 });

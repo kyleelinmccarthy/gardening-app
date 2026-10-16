@@ -2,16 +2,12 @@
 
 import { PlantLink } from "@/components/plants/PlantLink";
 import { eventsInMonth } from "@/domain/calendar";
+import { MONTH_NAMES_LONG } from "@/domain/dates";
 import type { CalendarEvent } from "@/domain/types";
 import { CALENDAR_EVENT_LABELS } from "@/lib/labels";
 import { cn } from "@/lib/cn";
 import { EVENT_BAR_CLASSES } from "./event-styles";
 import { eventRangeLabel, timingLabel } from "./timeline";
-
-const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
 
 function EventItem({ event, extra }: { event: CalendarEvent; extra?: string }) {
   return (
@@ -29,7 +25,7 @@ function EventItem({ event, extra }: { event: CalendarEvent; extra?: string }) {
 export function MonthList({ events, year }: { events: readonly CalendarEvent[]; year: number }) {
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      {MONTH_NAMES.map((name, index) => {
+      {MONTH_NAMES_LONG.map((name, index) => {
         const inMonth = eventsInMonth(events, year, index);
         return (
           <section key={name} aria-label={`${name} ${year}`} className="rounded-xl border border-border bg-surface p-4">

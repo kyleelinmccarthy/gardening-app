@@ -2,10 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { AddToGardenButton } from "@/components/plants/AddToGardenButton";
-import { CheckboxField } from "@/components/plants/CheckboxField";
-import { LoadingSkeleton } from "@/components/plants/LoadingSkeleton";
 import { PlantCard } from "@/components/plants/PlantCard";
-import { ButtonLink, Card, ChipGroup, EmptyState } from "@/components/ui";
+import { ButtonLink, Card, Checkbox, ChipGroup, EmptyState, LoadingState } from "@/components/ui";
 import { recommendPlants } from "@/domain/recommendation";
 import { PLANT_CATEGORIES } from "@/domain/types";
 import { CATEGORY_EMOJI, CATEGORY_LABELS } from "@/lib/labels";
@@ -31,7 +29,7 @@ export function Recommendations() {
     [catalog, profile, showAll],
   );
 
-  if (!hydrated) return <LoadingSkeleton />;
+  if (!hydrated) return <LoadingState />;
 
   if (!activeGarden || !profile) {
     return (
@@ -69,10 +67,10 @@ export function Recommendations() {
             value={[activeCategory]}
             onChange={(v) => setCategory((v[0] as CategoryFilter | undefined) ?? "all")}
           />
-          <CheckboxField
+          <Checkbox
             label="Show plants that aren't a good fit (with reasons)"
             checked={showAll}
-            onChange={setShowAll}
+            onChange={(e) => setShowAll(e.target.checked)}
           />
         </div>
       </Card>

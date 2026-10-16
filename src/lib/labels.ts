@@ -16,6 +16,7 @@ import type {
   GardenSetting,
   Humidity,
   IndoorLight,
+  InsectRole,
   LifeCycle,
   Pet,
   PlantCategory,
@@ -23,6 +24,7 @@ import type {
   SoilType,
   SpaceSize,
   SunExposure,
+  ToolInfo,
   ToxicityLevel,
   Verdict,
   WaterNeed,
@@ -221,6 +223,33 @@ export const FEEDING_LABELS: Record<FeedingLevel, string> = {
   moderate: "Moderate feeder",
   heavy: "Heavy feeder",
 };
+
+export const TOOL_CATEGORY_LABELS: Record<ToolInfo["category"], string> = {
+  "hand-tool": "Hand tools",
+  watering: "Watering",
+  structure: "Structures & supports",
+  indoor: "Indoor growing",
+  protection: "Protection & mulch",
+  soil: "Soil & compost",
+};
+
+export const COST_LABELS: Record<ToolInfo["costTier"], string> = {
+  $: "Budget",
+  $$: "Mid-range",
+  $$$: "Investment",
+};
+
+export const INSECT_ROLE_LABELS: Record<InsectRole, string> = {
+  pest: "Pest",
+  "animal-pest": "Wildlife pest",
+  beneficial: "Beneficial",
+  pollinator: "Pollinator",
+};
+
+/** A label without its trailing parenthetical hint: "Full sun (6+ h)" → "Full sun". */
+export function shortLabel(label: string): string {
+  return label.replace(/\s*\(.*\)$/, "");
+}
 
 export interface Option<T extends string> {
   value: T;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { needsWinterHardiness, zoneSupports } from "./zones";
-import { makePlant } from "./test-fixtures";
+import { makePlant } from "@/test/fixtures";
 
 describe("zoneSupports", () => {
   const hardiness = { min: 5, max: 9 };

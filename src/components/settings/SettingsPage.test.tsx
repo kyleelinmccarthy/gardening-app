@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { exportAppData } from "@/storage/repository";
-import { makeAppData, makeGarden, makePlant } from "@/test/fixtures";
+import { makeAppData, makeBed, makeGarden, makePlant, makePlanting } from "@/test/fixtures";
 import { renderWithAppData } from "@/test/render";
 import { SettingsPage } from "./SettingsPage";
 
@@ -207,6 +207,18 @@ describe("SettingsPage", () => {
       expect(getData().customPlants).toHaveLength(1);
       await user.click(screen.getByRole("button", { name: "Delete Moss" }));
       expect(getData().customPlants).toHaveLength(0);
+    });
+
+    it("warns that plantings and bed placements are removed, and removes them", async () => {
+      const user = userEvent.setup();
+      const data = twoGardens();
+      data.gardens[0].beds = [makeBed({ placements: [{ plantId: data.customPlants[0].id, x: 0, y: 0 }] })];
+      data.gardens[0].plantings = [makePlanting({ plantId: data.customPlants[0].id })];
+      const { getData } = renderWithAppData(<SettingsPage />, { data });
+      await user.click(await screen.findByRole("button", { name: "Delete Moss" }));
+      expect(confirmSpy).toHaveBeenLastCalledWith(expect.stringMatching(/plantings and bed placements will be removed/));
+      expect(getData().gardens[0].plantings).toEqual([]);
+      expect(getData().gardens[0].beds[0].placements).toEqual([]);
     });
   });
 

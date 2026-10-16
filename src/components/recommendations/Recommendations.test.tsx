@@ -1,17 +1,16 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { createDefaultProfile } from "@/domain/defaults";
 import { makeAppData, makeGarden } from "@/test/fixtures";
 import { renderWithAppData } from "@/test/render";
 import { Recommendations } from "./Recommendations";
 
 vi.mock("@/data/plants", async () => {
-  const { makeTestPlants } = await vi.importActual<typeof import("@/components/plants/test-plants")>(
-    "@/components/plants/test-plants",
-  );
+  const { makeTestPlants } = await vi.importActual<typeof import("@/test/fixtures")>("@/test/fixtures");
   return { BUILTIN_PLANTS: makeTestPlants() };
 });
 
-const withGarden = () => ({ data: makeAppData([makeGarden()]) });
+const withGarden = () => ({ data: makeAppData([makeGarden({ profile: createDefaultProfile() })]) });
 const names = () => screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent?.replace(/^\S+\s/, ""));
 
 describe("Recommendations", () => {

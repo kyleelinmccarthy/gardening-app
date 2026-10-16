@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { LoadingSkeleton } from "@/components/plants/LoadingSkeleton";
 import { PlantDetail } from "@/components/plants/PlantDetail";
+import { LoadingState } from "@/components/ui";
 import { BUILTIN_PLANTS } from "@/data/plants";
 
 type PlantPageProps = { params: Promise<{ id: string }> };
@@ -30,7 +30,7 @@ async function PlantContent({ params }: PlantPageProps) {
 
 export default function PlantPage({ params }: PlantPageProps) {
   return (
-    <Suspense fallback={<LoadingSkeleton />}>
+    <Suspense fallback={<LoadingState />}>
       <PlantContent params={params} />
     </Suspense>
   );

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createPlantCatalog } from "./catalog";
-import { makePlant } from "./test-fixtures";
+import { makePlant } from "@/test/fixtures";
 import type { Plant } from "./types";
 
 const plant = (id: string, name: string, extra: Partial<Plant> = {}): Plant => makePlant({ id, name, ...extra });

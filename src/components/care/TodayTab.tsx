@@ -3,13 +3,13 @@
 import { useMemo } from "react";
 import { PlantLink } from "@/components/plants/PlantLink";
 import { Badge, Button, Card } from "@/components/ui";
-import { completeTask, getCareTasks, type CareTaskItem } from "@/domain/care";
+import { careContextFor, completeTask, getCareTasks, type CareTaskItem } from "@/domain/care";
 import { todayIso } from "@/domain/dates";
 import type { Garden } from "@/domain/types";
 import { CARE_EMOJI, CARE_LABELS } from "@/lib/labels";
 import { createId } from "@/lib/id";
 import { useAppData } from "@/state/AppDataProvider";
-import { careContext, completionActions, dueLabel, groupTasksByType, partitionTasks } from "./careModel";
+import { completionActions, dueLabel, groupTasksByType, partitionTasks } from "./careModel";
 
 const UPCOMING_DAYS = 7;
 
@@ -53,7 +53,7 @@ export function TodayTab({ garden }: { garden: Garden }) {
   const today = todayIso();
 
   const { due, upcoming } = useMemo(() => {
-    const tasks = getCareTasks(garden, catalog, today, careContext(garden.profile), UPCOMING_DAYS);
+    const tasks = getCareTasks(garden, catalog, today, careContextFor(garden.profile), UPCOMING_DAYS);
     return partitionTasks(tasks, today);
   }, [garden, catalog, today]);
 

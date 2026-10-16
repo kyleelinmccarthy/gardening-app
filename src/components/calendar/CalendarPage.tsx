@@ -1,8 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { GardenGate } from "@/components/planner/GardenGate";
-import { Card, ChipGroup, PageHeader, Select, Tabs, type ChipOption } from "@/components/ui";
+import { Card, Checkbox, ChipGroup, GardenGate, PageHeader, Select, Tabs, type ChipOption } from "@/components/ui";
 import { buildPlantingCalendar, upcomingEvents } from "@/domain/calendar";
 import { todayIso } from "@/domain/dates";
 import { recommendPlants } from "@/domain/recommendation";
@@ -78,15 +77,11 @@ function Calendar({ garden }: { garden: Garden }) {
             />
           )}
           <div className="flex flex-wrap items-end gap-4">
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                className="h-4 w-4 accent-primary"
-                checked={includeRecommended}
-                onChange={(e) => setIncludeRecommended(e.target.checked)}
-              />
-              Include top recommendations
-            </label>
+            <Checkbox
+              label="Include top recommendations"
+              checked={includeRecommended}
+              onChange={(e) => setIncludeRecommended(e.target.checked)}
+            />
             <label className="flex flex-col gap-1 text-sm font-medium">
               Year
               <Select

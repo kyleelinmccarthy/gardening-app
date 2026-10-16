@@ -1,7 +1,7 @@
 /** Pure presentation helpers shared by PlantCard, PlantDetail and the recommendations page. */
 import type { BadgeTone } from "@/components/ui";
 import type { Difficulty, Reason, SunExposure, Verdict } from "@/domain/types";
-import { SUN_LABELS } from "@/lib/labels";
+import { shortLabel, SUN_LABELS } from "@/lib/labels";
 
 export const VERDICT_TONES: Record<Verdict, BadgeTone> = {
   great: "success",
@@ -29,5 +29,5 @@ export function topReasons(reasons: readonly Reason[], count = 2): Reason[] {
 
 /** "Full sun / Partial sun" — labels without the hour hints. */
 export function sunSummary(sun: readonly SunExposure[]): string {
-  return sun.map((s) => SUN_LABELS[s].replace(/\s*\(.*\)$/, "")).join(" / ");
+  return sun.map((s) => shortLabel(SUN_LABELS[s])).join(" / ");
 }

@@ -5,8 +5,10 @@ export { buttonClasses, type ButtonSize, type ButtonVariant } from "./button-sty
 export { Card, type CardProps } from "./Card";
 export { Checkbox, type CheckboxProps } from "./Checkbox";
 export { ChipGroup, type ChipGroupProps, type ChipOption } from "./ChipGroup";
+export { ConfirmButton, type ConfirmButtonProps } from "./ConfirmButton";
 export { EmptyState, type EmptyStateProps } from "./EmptyState";
 export { Field, useFieldControl, type FieldProps } from "./Field";
+export { GardenGate, type GardenGateProps } from "./GardenGate";
 export { LoadingState, type LoadingStateProps } from "./LoadingState";
 export { NumberInput, type NumberInputProps } from "./NumberInput";
 export { PageHeader, type PageHeaderProps } from "./PageHeader";
@@ -14,5 +16,6 @@ export { ReasonList, type ReasonListProps } from "./ReasonList";
 export { Select, type SelectProps } from "./Select";
 export { StatTile, type StatTileProps } from "./StatTile";
 export { Tabs, type TabItem, type TabsProps } from "./Tabs";
+export { TemperatureInput, type TemperatureInputProps } from "./TemperatureInput";
 export { TextInput, type TextInputProps } from "./TextInput";
 export { Textarea, type TextareaProps } from "./Textarea";

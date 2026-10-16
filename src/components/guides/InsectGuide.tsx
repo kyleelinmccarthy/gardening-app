@@ -5,6 +5,7 @@ import { PlantLink } from "@/components/plants/PlantLink";
 import { Badge, Field, TextInput } from "@/components/ui";
 import { INSECTS } from "@/data/insects";
 import type { Insect, Plant } from "@/domain/types";
+import { INSECT_ROLE_LABELS } from "@/lib/labels";
 import { useAppData } from "@/state/AppDataProvider";
 import { GuideCard, GuideList } from "./GuideCard";
 import {
@@ -16,11 +17,11 @@ import {
   type InsectGroup,
 } from "./guideLookups";
 
-const ROLE_BADGES: Record<Insect["role"], { label: string; tone: "danger" | "warning" | "success" | "info" }> = {
-  pest: { label: "Pest", tone: "danger" },
-  "animal-pest": { label: "Wildlife pest", tone: "warning" },
-  beneficial: { label: "Beneficial", tone: "success" },
-  pollinator: { label: "Pollinator", tone: "info" },
+const ROLE_TONES: Record<Insect["role"], "danger" | "warning" | "success" | "info"> = {
+  pest: "danger",
+  "animal-pest": "warning",
+  beneficial: "success",
+  pollinator: "info",
 };
 
 function PlantLinks({ title, plants }: { title: string; plants: Plant[] }) {
@@ -62,7 +63,6 @@ export function InsectGuide({ group }: { group: InsectGroup }) {
       ) : (
         <div className="grid items-start gap-4 lg:grid-cols-2">
           {insects.map((insect) => {
-            const role = ROLE_BADGES[insect.role];
             const isPest = group === "pests";
             return (
               <GuideCard
@@ -73,7 +73,7 @@ export function InsectGuide({ group }: { group: InsectGroup }) {
                     <span aria-hidden="true">{insect.emoji}</span> {insect.name}
                   </>
                 }
-                badges={<Badge tone={role.tone}>{role.label}</Badge>}
+                badges={<Badge tone={ROLE_TONES[insect.role]}>{INSECT_ROLE_LABELS[insect.role]}</Badge>}
               >
                 <p>{insect.description}</p>
                 <GuideList title={copy.signs} items={insect.signs} />

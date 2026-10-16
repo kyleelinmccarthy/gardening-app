@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Card, PageHeader } from "@/components/ui";
+import { Button, Card, GardenGate, PageHeader } from "@/components/ui";
 import { createBed } from "@/domain/defaults";
 import type { Garden } from "@/domain/types";
 import { createId } from "@/lib/id";
@@ -9,7 +9,6 @@ import { useAppData } from "@/state/AppDataProvider";
 import { BedEditor } from "./BedEditor";
 import { BedForm } from "./BedForm";
 import { BedList } from "./BedList";
-import { GardenGate } from "./GardenGate";
 import { defaultBedValues } from "./plannerModel";
 
 function Planner({ garden }: { garden: Garden }) {

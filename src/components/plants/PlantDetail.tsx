@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { Badge, ButtonLink, Card, EmptyState, ReasonList } from "@/components/ui";
+import { Badge, ButtonLink, Card, EmptyState, LoadingState, ReasonList } from "@/components/ui";
 import { todayIso } from "@/domain/dates";
 import { evaluatePlant } from "@/domain/recommendation";
 import { CATEGORY_LABELS, DIFFICULTY_LABELS, LIFE_CYCLE_LABELS, VERDICT_LABELS } from "@/lib/labels";
 import { useAppData } from "@/state/AppDataProvider";
 import { AddToGardenButton } from "./AddToGardenButton";
-import { LoadingSkeleton } from "./LoadingSkeleton";
 import { DIFFICULTY_TONES, sunSummary, VERDICT_TONES } from "./plantCardModel";
 import {
   CompanionsSection,
@@ -25,7 +24,7 @@ import { petSafetyBadge } from "./plantSafety";
 /** Full plant profile. Looks the plant up client-side so custom plants (stored in the browser) work too. */
 export function PlantDetail({ id }: { id: string }) {
   const { catalog, activeGarden, data, hydrated } = useAppData();
-  if (!hydrated) return <LoadingSkeleton />;
+  if (!hydrated) return <LoadingState />;
 
   const plant = catalog.get(id);
   if (!plant) {

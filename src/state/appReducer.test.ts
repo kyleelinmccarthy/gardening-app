@@ -1,8 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { MAX_BED_DIMENSION } from "@/domain/constants";
-import { todayIso } from "@/domain/dates";
 import { createDefaultProfile } from "@/domain/defaults";
 import type { AppData, Garden } from "@/domain/types";
 import { createEmptyAppData, parseAppData } from "@/storage/schema";
@@ -115,7 +114,7 @@ describe("unknown garden ids", () => {
     { type: "bed/add", gardenId: "nope", bed: makeBed() },
     { type: "bed/update", gardenId: "nope", bedId: "bed-1", changes: { name: "x" } },
     { type: "bed/delete", gardenId: "nope", bedId: "bed-1" },
-    { type: "bed/place", gardenId: "nope", bedId: "bed-1", plantId: "p", x: 0, y: 0 },
+    { type: "bed/place", gardenId: "nope", bedId: "bed-1", plantId: "p", x: 0, y: 0, plantingId: "pl", plantedOn: "2026-05-05" },
     { type: "bed/clearCell", gardenId: "nope", bedId: "bed-1", x: 0, y: 0 },
     { type: "bed/clearAll", gardenId: "nope", bedId: "bed-1" },
     { type: "planting/add", gardenId: "nope", planting: planting() },
@@ -205,6 +204,16 @@ describe("bed actions", () => {
   });
 
   describe("bed/place", () => {
+    const PLACE = {
+      type: "bed/place",
+      gardenId: "garden-1",
+      bedId: "bed-1",
+      plantId: "p",
+      x: 0,
+      y: 0,
+      plantingId: "pl-auto",
+      plantedOn: "2026-05-05",
+    } as const;
     const base = () => makeAppData([makeGarden({ beds: [makeBed()] })]);
     const place = (state: AppData, over: Partial<Extract<AppAction, { type: "bed/place" }>> = {}) =>
       run(state, {
@@ -250,10 +259,20 @@ describe("bed actions", () => {
       ]);
     });
 
-    it("generates an id and date when not provided", () => {
-      const g = gardenOf(place(base(), { plantingId: undefined, plantedOn: undefined }));
-      expect(g.plantings[0].id).toMatch(/^planting-/);
-      expect(g.plantings[0].plantedOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    it("uses only the id and date carried by the action (the reducer reads no clock or id source)", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(2031, 0, 1));
+      try {
+        const g = gardenOf(place(base(), { plantingId: "pl-given", plantedOn: "2026-03-10" }));
+        expect(g.plantings[0].id).toBe("pl-given");
+        expect(g.plantings[0].plantedOn).toBe("2026-03-10");
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("is deterministic: the same action on the same state gives equal results", () => {
+      expect(place(base())).toEqual(place(base()));
     });
 
     it.each(["container", "windowsill", "shelf"] as const)("marks plantings in a %s bed as inContainer", (kind) => {
@@ -298,13 +317,13 @@ describe("bed actions", () => {
 
     it("ignores out-of-bounds cells", () => {
       const state = base();
-      expect(appReducer(state, { type: "bed/place", gardenId: "garden-1", bedId: "bed-1", plantId: "p", x: 4, y: 0 })).toBe(state);
-      expect(appReducer(state, { type: "bed/place", gardenId: "garden-1", bedId: "bed-1", plantId: "p", x: 0, y: -1 })).toBe(state);
+      expect(appReducer(state, { ...PLACE, x: 4, y: 0 })).toBe(state);
+      expect(appReducer(state, { ...PLACE, x: 0, y: -1 })).toBe(state);
     });
 
     it("ignores unknown beds", () => {
       const state = base();
-      expect(appReducer(state, { type: "bed/place", gardenId: "garden-1", bedId: "zzz", plantId: "p", x: 0, y: 0 })).toBe(state);
+      expect(appReducer(state, { ...PLACE, bedId: "zzz" })).toBe(state);
     });
   });
 
@@ -456,6 +475,71 @@ describe("custom plants", () => {
     const state = makeAppData([makeGarden()], { customPlants: [makePlant({ id: "a" }), makePlant({ id: "b" })] });
     const next = run(state, { type: "customPlant/delete", plantId: "a" });
     expect(next.customPlants.map((p) => p.id)).toEqual(["b"]);
+  });
+
+  describe("customPlant/delete cascade", () => {
+    const withPlant = () =>
+      makeAppData(
+        [
+          makeGarden({
+            id: "g1",
+            beds: [
+              makeBed({
+                placements: [
+                  { plantId: "mine", x: 0, y: 0 },
+                  { plantId: "other", x: 1, y: 0 },
+                  { plantId: "mine", x: 2, y: 0 },
+                ],
+              }),
+            ],
+            plantings: [planting({ id: "pl-mine", plantId: "mine" }), planting({ id: "pl-other", plantId: "other" })],
+            careLog: [{ id: "c1", plantingId: "pl-mine", type: "water", date: "2026-05-01" }],
+            journal: [{ id: "j1", date: "2026-05-01", title: "t", text: "x", plantingId: "pl-mine" }],
+            reminders: [
+              { id: "r1", title: "Feed", dueDate: "2026-05-02", done: false, plantingId: "pl-mine" },
+              { id: "r2", title: "Other", dueDate: "2026-05-02", done: false, plantingId: "pl-other" },
+            ],
+          }),
+          makeGarden({
+            id: "g2",
+            beds: [makeBed({ id: "bed-9", placements: [{ plantId: "mine", x: 0, y: 0 }] })],
+            plantings: [planting({ id: "pl-g2", plantId: "mine", bedId: "bed-9" })],
+          }),
+        ],
+        { customPlants: [makePlant({ id: "mine" }), makePlant({ id: "other" })] },
+      );
+    const del = () => run(withPlant(), { type: "customPlant/delete", plantId: "mine" });
+
+    it("removes the plant's placements from every bed in every garden", () => {
+      const next = del();
+      expect(gardenOf(next, "g1").beds[0].placements).toEqual([{ plantId: "other", x: 1, y: 0 }]);
+      expect(gardenOf(next, "g2").beds[0].placements).toEqual([]);
+    });
+
+    it("removes the plant's plantings from every garden", () => {
+      const next = del();
+      expect(gardenOf(next, "g1").plantings.map((p) => p.id)).toEqual(["pl-other"]);
+      expect(gardenOf(next, "g2").plantings).toEqual([]);
+    });
+
+    it("keeps care history and journal entries, and unlinks reminders of removed plantings", () => {
+      const g = gardenOf(del(), "g1");
+      expect(g.careLog).toEqual(withPlant().gardens[0].careLog);
+      expect(g.journal).toEqual(withPlant().gardens[0].journal);
+      expect("plantingId" in g.reminders[0]).toBe(false);
+      expect(g.reminders[0].title).toBe("Feed");
+      expect(g.reminders[1].plantingId).toBe("pl-other");
+    });
+
+    it("leaves other custom plants and unrelated gardens' data alone", () => {
+      const next = del();
+      expect(next.customPlants.map((p) => p.id)).toEqual(["other"]);
+      const untouched = makeAppData([makeGarden({ plantings: [planting({ plantId: "other" })] })], {
+        customPlants: [makePlant({ id: "mine" })],
+      });
+      const after = appReducer(untouched, { type: "customPlant/delete", plantId: "mine" });
+      expect(after.gardens).toBe(untouched.gardens);
+    });
   });
 });
 
@@ -611,33 +695,6 @@ describe("bed/update kind change", () => {
   });
 });
 
-describe("local dates", () => {
-  const originalTz = process.env.TZ;
-  afterEach(() => {
-    vi.useRealTimers();
-    if (originalTz === undefined) delete process.env.TZ;
-    else process.env.TZ = originalTz;
-  });
-
-  it("bed/place stamps the LOCAL date (not UTC) on an auto-created planting", () => {
-    // A US evening: 22:30 local on the 10th is already the 11th in UTC.
-    process.env.TZ = "America/Los_Angeles";
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 2, 10, 22, 30));
-    expect(new Date().toISOString().slice(0, 10)).toBe("2026-03-11");
-    const next = appReducer(makeAppData([makeGarden({ beds: [makeBed()] })]), {
-      type: "bed/place",
-      gardenId: "garden-1",
-      bedId: "bed-1",
-      plantId: "test-tomato",
-      x: 0,
-      y: 0,
-    });
-    expect(gardenOf(next).plantings[0].plantedOn).toBe(todayIso());
-    expect(gardenOf(next).plantings[0].plantedOn).toBe("2026-03-10");
-  });
-});
-
 describe("data/replace sanitising", () => {
   it("drops out-of-bounds placements and repairs a dangling activeGardenId", () => {
     const dirty = makeAppData(
@@ -675,7 +732,7 @@ describe("persistence safety", () => {
     { type: "bed/update", gardenId: g, bedId: "bed-1", changes: { sun: undefined, columns: 0, rows: 2.5, cellSizeInches: 0 } },
     { type: "bed/update", gardenId: g, bedId: "bed-1", changes: { kind: "windowsill", columns: 3 } },
     { type: "bed/delete", gardenId: g, bedId: "bed-1" },
-    { type: "bed/place", gardenId: g, bedId: "bed-1", plantId: "other", x: 1, y: 1 },
+    { type: "bed/place", gardenId: g, bedId: "bed-1", plantId: "other", x: 1, y: 1, plantingId: "pl-new", plantedOn: "2026-05-05" },
     { type: "bed/clearCell", gardenId: g, bedId: "bed-1", x: 0, y: 0 },
     { type: "bed/clearAll", gardenId: g, bedId: "bed-1" },
     { type: "planting/add", gardenId: g, planting: planting({ id: "pl-2" }) },

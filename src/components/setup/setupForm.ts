@@ -52,12 +52,14 @@ export interface SetupFormState {
   /** "MM-DD"; ignored when `frostFree`. */
   lastFrost: string;
   firstFrost: string;
-  summerHighF: number;
-  winterLowF: number;
+  /** °F; null while the field is empty (validation blocks continuing). */
+  summerHighF: number | null;
+  winterLowF: number | null;
   humidity: Humidity;
   zip: string;
   indoorLight: IndoorLight;
-  indoorTempF: number;
+  /** °F; null while the field is empty (only required for indoor gardens). */
+  indoorTempF: number | null;
   indoorHumidity: Humidity;
   sunExposure: SunExposure;
   soilType: SoilType;
@@ -119,22 +121,28 @@ export function initialSetupState(): SetupFormState {
   return stateFromProfile("", createDefaultProfile());
 }
 
-/** Converts the form back into a profile. Indoor gardens are always container gardens. */
+/**
+ * Converts the form back into a profile. Indoor gardens are always container
+ * gardens. Call after validation: an empty temperature (null) falls back to
+ * the default for the chosen zone / room rather than producing a bad profile.
+ */
 export function toProfile(state: SetupFormState): GardenProfile {
   const zip = state.zip.trim();
   const indoor = state.setting === "indoor";
+  const defaults = createDefaultProfile();
+  const zoneClimate = climateFromZone(state.zone, ZONES);
   return {
     setting: state.setting,
     climate: {
       hardinessZone: state.zone,
       lastFrost: state.frostFree ? null : state.lastFrost,
       firstFrost: state.frostFree ? null : state.firstFrost,
-      summerHighF: state.summerHighF,
-      winterLowF: state.winterLowF,
+      summerHighF: state.summerHighF ?? zoneClimate.summerHighF,
+      winterLowF: state.winterLowF ?? zoneClimate.winterLowF,
       humidity: state.humidity,
       ...(zip ? { zip } : {}),
     },
-    indoor: { light: state.indoorLight, averageTempF: state.indoorTempF, humidity: state.indoorHumidity },
+    indoor: { light: state.indoorLight, averageTempF: state.indoorTempF ?? defaults.indoor.averageTempF, humidity: state.indoorHumidity },
     sunExposure: state.sunExposure,
     soilType: state.soilType,
     space: state.space,
@@ -195,7 +203,7 @@ export function isValidMonthDay(value: string): boolean {
   return day >= 1 && day <= new Date(Date.UTC(2000, month, 0)).getUTCDate();
 }
 
-const isFiniteNumber = (n: number) => typeof n === "number" && Number.isFinite(n);
+const isFiniteNumber = (n: number | null): n is number => typeof n === "number" && Number.isFinite(n);
 
 /** Errors blocking progress past `step` (empty object = OK). */
 export function validateStep(step: SetupStepId, state: SetupFormState): SetupErrors {
@@ -212,9 +220,10 @@ export function validateStep(step: SetupStepId, state: SetupFormState): SetupErr
         if (!isValidMonthDay(state.lastFrost)) errors.lastFrost = "Enter a valid last spring frost date.";
         if (!isValidMonthDay(state.firstFrost)) errors.firstFrost = "Enter a valid first fall frost date.";
       }
-      if (!isFiniteNumber(state.summerHighF)) errors.summerHighF = "Enter a summer high temperature.";
-      if (!isFiniteNumber(state.winterLowF)) errors.winterLowF = "Enter a winter low temperature.";
-      if (!errors.summerHighF && !errors.winterLowF && state.winterLowF >= state.summerHighF) {
+      const { summerHighF, winterLowF } = state;
+      if (!isFiniteNumber(summerHighF)) errors.summerHighF = "Enter a summer high temperature.";
+      if (!isFiniteNumber(winterLowF)) errors.winterLowF = "Enter a winter low temperature.";
+      if (isFiniteNumber(summerHighF) && isFiniteNumber(winterLowF) && winterLowF >= summerHighF) {
         errors.winterLowF = "Winter low must be colder than the summer high.";
       }
       if (state.setting === "indoor" && !isFiniteNumber(state.indoorTempF)) {

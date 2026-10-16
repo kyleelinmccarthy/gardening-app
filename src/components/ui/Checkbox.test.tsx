@@ -35,6 +35,14 @@ describe("Checkbox", () => {
     expect(screen.getByRole("checkbox")).toHaveAccessibleDescription("Extra Hide toxic plants");
   });
 
+  it("keeps the hint out of the accessible name (it is a description)", () => {
+    render(<Checkbox label="Safe for my pets" hint="Your garden has no pets" />);
+    const box = screen.getByRole("checkbox", { name: "Safe for my pets" });
+    expect(box).toHaveAccessibleName("Safe for my pets");
+    expect(box).toHaveAccessibleDescription("Your garden has no pets");
+    expect(screen.getByText("Your garden has no pets").closest("label")).toBeNull();
+  });
+
   it("can be disabled", () => {
     render(<Checkbox label="Nope" disabled />);
     expect(screen.getByRole("checkbox")).toBeDisabled();

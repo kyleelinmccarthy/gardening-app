@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { ConfirmButton } from "@/components/planner/ConfirmButton";
 import { PlantLink } from "@/components/plants/PlantLink";
-import { Badge, Button, Card, Field, Select, TextInput, Textarea } from "@/components/ui";
+import { Badge, Button, Card, ConfirmButton, Field, Select, TextInput, Textarea } from "@/components/ui";
 import { formatDisplayDate, todayIso } from "@/domain/dates";
 import type { Garden, JournalEntry } from "@/domain/types";
 import { createId } from "@/lib/id";

@@ -1,3 +1,4 @@
+import { TOOLS } from "@/data/tools";
 import {
   ALLERGENS,
   DIFFICULTIES,
@@ -65,6 +66,19 @@ describe("labels", () => {
     expectCovers(labels.VERDICT_LABELS, ["great", "good", "possible", "not-recommended"]);
   });
 
+  it("covers tool categories, cost tiers and insect roles", () => {
+    expectCovers(labels.TOOL_CATEGORY_LABELS, ["hand-tool", "watering", "structure", "indoor", "protection", "soil"]);
+    expectCovers(labels.COST_LABELS, ["$", "$$", "$$$"]);
+    expectCovers(labels.INSECT_ROLE_LABELS, ["pest", "animal-pest", "beneficial", "pollinator"]);
+  });
+
+  it("has a label for every tool category and cost tier used by the tool data", () => {
+    for (const tool of TOOLS) {
+      expect(labels.TOOL_CATEGORY_LABELS[tool.category]).toBeTruthy();
+      expect(labels.COST_LABELS[tool.costTier]).toBeTruthy();
+    }
+  });
+
   it("mentions hours in sun labels", () => {
     expect(labels.SUN_LABELS["full-sun"]).toBe("Full sun (6+ h)");
   });
@@ -82,5 +96,22 @@ describe("toOptions", () => {
       "high",
       "low",
     ]);
+  });
+});
+
+describe("shortLabel", () => {
+  it("drops a trailing parenthetical hint", () => {
+    expect(labels.shortLabel(labels.SUN_LABELS["full-sun"])).toBe("Full sun");
+    expect(labels.shortLabel(labels.SUN_LABELS["partial-shade"])).toBe("Partial shade");
+  });
+  it("leaves labels without a hint unchanged", () => {
+    expect(labels.shortLabel("Direct sun")).toBe("Direct sun");
+  });
+  it("shortens every sun label to a non-empty hint-free string", () => {
+    for (const label of Object.values(labels.SUN_LABELS)) {
+      const short = labels.shortLabel(label);
+      expect(short).not.toBe("");
+      expect(short).not.toContain("(");
+    }
   });
 });

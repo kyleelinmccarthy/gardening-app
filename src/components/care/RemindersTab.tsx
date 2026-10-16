@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { ConfirmButton } from "@/components/planner/ConfirmButton";
 import { PlantLink } from "@/components/plants/PlantLink";
-import { Badge, Button, Card, Field, NumberInput, Select, TextInput } from "@/components/ui";
+import { Badge, Button, Card, Checkbox, ConfirmButton, Field, NumberInput, Select, TextInput } from "@/components/ui";
 import { formatDisplayDate, todayIso } from "@/domain/dates";
 import type { Garden, Reminder } from "@/domain/types";
 import { createId } from "@/lib/id";
@@ -93,26 +92,23 @@ function ReminderItem({ garden, reminder, today }: { garden: Garden; reminder: R
 
   return (
     <li className="flex flex-wrap items-center justify-between gap-3 py-3">
-      <label className="flex min-w-0 items-start gap-3">
-        <input
-          type="checkbox"
-          className="mt-1 h-4 w-4 accent-primary"
-          checked={reminder.done}
-          aria-label={`Done: ${reminder.title}`}
-          onChange={(e) =>
-            dispatch({ type: "reminder/update", gardenId: garden.id, reminderId: reminder.id, changes: { done: e.target.checked } })
-          }
-        />
-        <span className="min-w-0">
-          <span className={reminder.done ? "text-muted line-through" : "font-medium"}>{reminder.title}</span>
-          <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+      <Checkbox
+        className="min-w-0 gap-3"
+        checked={reminder.done}
+        aria-label={`Done: ${reminder.title}`}
+        label={<span className={reminder.done ? "text-muted line-through" : "font-medium"}>{reminder.title}</span>}
+        hint={
+          <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
             <span>Due {formatDisplayDate(reminder.dueDate, { year: true })}</span>
             {overdue && <Badge tone="danger">Overdue</Badge>}
             {reminder.repeatDays && <Badge>Repeats every {reminder.repeatDays} days</Badge>}
             {planting && <PlantLink plantId={planting.plantId} />}
           </span>
-        </span>
-      </label>
+        }
+        onChange={(e) =>
+          dispatch({ type: "reminder/update", gardenId: garden.id, reminderId: reminder.id, changes: { done: e.target.checked } })
+        }
+      />
       <div className="flex gap-2">
         <Button size="sm" variant="secondary" aria-label={`Edit ${reminder.title}`} onClick={() => setEditing(true)}>
           Edit

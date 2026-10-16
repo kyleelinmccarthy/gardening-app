@@ -14,7 +14,7 @@ export function CustomPlantsSection() {
   const [editing, setEditing] = useState<Editing>(null);
 
   function remove(plant: Plant) {
-    const ok = window.confirm(`Delete the custom plant “${plant.name}”? Plantings that use it will no longer show up in your gardens.`);
+    const ok = window.confirm(`Delete the custom plant “${plant.name}”? Its plantings and bed placements will be removed from all of your gardens.`);
     if (ok) dispatch({ type: "customPlant/delete", plantId: plant.id });
   }
 

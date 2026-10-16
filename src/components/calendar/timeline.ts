@@ -2,7 +2,7 @@
  * Pure helpers for the planting-calendar timeline: date → percent geometry,
  * lane packing, per-plant grouping and the text used for tooltips.
  */
-import { diffDays, formatDisplayDate, parseIsoDate } from "@/domain/dates";
+import { diffDays, formatDisplayDate, MONTH_NAMES_SHORT, parseIsoDate } from "@/domain/dates";
 import type { CalendarEvent, ClimateProfile, Garden } from "@/domain/types";
 import { CALENDAR_EVENT_LABELS } from "@/lib/labels";
 
@@ -49,11 +49,9 @@ export interface MonthColumn {
   width: number;
 }
 
-const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
-
 export function monthColumns(year: number): MonthColumn[] {
   const total = daysInYear(year);
-  return MONTH_ABBR.map((label, index) => {
+  return MONTH_NAMES_SHORT.map((label, index) => {
     const first = Date.UTC(year, index, 1);
     const next = Date.UTC(year, index + 1, 1);
     const startDay = Math.round((first - Date.UTC(year, 0, 1)) / 86_400_000);

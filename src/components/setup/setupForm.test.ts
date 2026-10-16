@@ -124,8 +124,22 @@ describe("validateStep", () => {
     expect(validateStep("climate", { ...valid, summerHighF: Number.NaN }).summerHighF).toBeTruthy();
   });
 
+  it("blocks the climate step while a temperature field is empty (null)", () => {
+    expect(validateStep("climate", { ...valid, summerHighF: null }).summerHighF).toBe("Enter a summer high temperature.");
+    expect(validateStep("climate", { ...valid, winterLowF: null }).winterLowF).toBe("Enter a winter low temperature.");
+    expect(validateStep("climate", { ...valid, summerHighF: null, winterLowF: null })).toEqual({
+      summerHighF: "Enter a summer high temperature.",
+      winterLowF: "Enter a winter low temperature.",
+    });
+    expect(firstInvalidStep({ ...valid, winterLowF: null })).toBe("climate");
+  });
+
   it("checks indoor temperature only for indoor gardens", () => {
+    expect(validateStep("climate", { ...valid, indoorTempF: null })).toEqual({});
     expect(validateStep("climate", { ...valid, indoorTempF: Number.NaN })).toEqual({});
+    expect(validateStep("climate", { ...valid, setting: "indoor", indoorTempF: null }).indoorTempF).toBe(
+      "Enter your average indoor temperature.",
+    );
     expect(validateStep("climate", { ...valid, setting: "indoor", indoorTempF: Number.NaN }).indoorTempF).toBeTruthy();
   });
 

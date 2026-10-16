@@ -48,11 +48,11 @@ export interface CustomPlantFormValues {
   wateringIntervalDays: string;
   waterNotes: string;
   humidity: Humidity;
-  // climate (°F)
-  minF: number;
-  idealMinF: number;
-  idealMaxF: number;
-  maxF: number;
+  // climate (°F; null while the field is empty, which validation rejects)
+  minF: number | null;
+  idealMinF: number | null;
+  idealMaxF: number | null;
+  maxF: number | null;
   zoneMin: string;
   zoneMax: string;
   // soil & feeding
@@ -189,6 +189,11 @@ const toNum = (s: string): number => (s.trim() === "" ? Number.NaN : Number(s));
 const isBlank = (s: string) => s.trim() === "";
 const optionalNum = (s: string): number | undefined => (isBlank(s) ? undefined : Number(s));
 const str = (n: number | undefined): string => (n === undefined ? "" : String(n));
+/** A temperature that validation has already proven present. */
+function requireTemp(n: number | null, label: string): number {
+  if (n === null || !Number.isFinite(n)) throw new Error(`${label} is required; validate the form before building a plant.`);
+  return n;
+}
 const lines = (text: string): string[] => text.split("\n").map((l) => l.trim()).filter(Boolean);
 const optionalText = (s: string): string | undefined => (s.trim() === "" ? undefined : s.trim());
 
@@ -227,7 +232,12 @@ export function toPlant(v: CustomPlantFormValues, id: string): Plant {
     wateringIntervalDays: Number(v.wateringIntervalDays),
     waterNotes: v.waterNotes.trim(),
     humidity: v.humidity,
-    temperature: { minF: v.minF, idealMinF: v.idealMinF, idealMaxF: v.idealMaxF, maxF: v.maxF },
+    temperature: {
+      minF: requireTemp(v.minF, "Minimum temperature"),
+      idealMinF: requireTemp(v.idealMinF, "Ideal low temperature"),
+      idealMaxF: requireTemp(v.idealMaxF, "Ideal high temperature"),
+      maxF: requireTemp(v.maxF, "Maximum temperature"),
+    },
     hardinessZones: { min: Number(v.zoneMin), max: Number(v.zoneMax) },
     soil: { types: v.soilTypes, phMin: Number(v.phMin), phMax: Number(v.phMax), drainage: v.drainage },
     fertilizer: {
@@ -355,8 +365,11 @@ export function validatePlantForm(v: CustomPlantFormValues): PlantFormErrors {
 
   need("wateringIntervalDays", v.wateringIntervalDays, "Watering interval", 1, true);
 
-  const t = [v.minF, v.idealMinF, v.idealMaxF, v.maxF];
-  if (t.some((x) => !Number.isFinite(x)) || t.some((x, i) => i > 0 && x < t[i - 1])) {
+  const temps = [v.minF, v.idealMinF, v.idealMaxF, v.maxF];
+  const filled = temps.filter((x): x is number => x !== null && Number.isFinite(x));
+  if (filled.length < temps.length) {
+    e.minF = "Enter all four temperatures: minimum, ideal low, ideal high, maximum.";
+  } else if (filled.some((x, i) => i > 0 && x < filled[i - 1])) {
     e.minF = "Temperatures must increase: minimum, ideal low, ideal high, maximum.";
   }
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getSafetyIssues, isPetSafe, toxicityRank } from "./safety";
-import { makePlant } from "./test-fixtures";
+import { makePlant } from "@/test/fixtures";
 import type { GardenProfile, Toxicity } from "./types";
 
 const tox = (overrides: Partial<Toxicity>): Toxicity => ({

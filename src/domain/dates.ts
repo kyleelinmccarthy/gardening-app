@@ -7,7 +7,8 @@ const MS_PER_DAY = 86_400_000;
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 const MONTH_DAY = /^(\d{2})-(\d{2})$/;
 
-const MONTHS_LONG = [
+/** Full English month names, January first (index = month - 1). */
+export const MONTH_NAMES_LONG = [
   "January",
   "February",
   "March",
@@ -21,6 +22,9 @@ const MONTHS_LONG = [
   "November",
   "December",
 ] as const;
+
+/** Three-letter month abbreviations ("Jan"…"Dec"). */
+export const MONTH_NAMES_SHORT: readonly string[] = MONTH_NAMES_LONG.map((n) => n.slice(0, 3));
 
 function pad(n: number, width = 2): string {
   return String(n).padStart(width, "0");
@@ -90,8 +94,20 @@ export interface DisplayDateOptions {
 /** Locale-independent display string such as "Apr 12". */
 export function formatDisplayDate(iso: string, opts: DisplayDateOptions = {}): string {
   const d = parseIsoDate(iso);
-  const name = MONTHS_LONG[d.getUTCMonth()];
+  const name = MONTH_NAMES_LONG[d.getUTCMonth()];
   const month = opts.month === "long" ? name : name.slice(0, 3);
   const base = `${month} ${d.getUTCDate()}`;
   return opts.year ? `${base}, ${d.getUTCFullYear()}` : base;
+}
+
+/**
+ * "04-15" → "Apr 15". A leap year is used so "02-29" stays valid; a value that
+ * is not a real month-day (e.g. "02-31") is returned unchanged rather than throwing.
+ */
+export function formatMonthDay(md: string): string {
+  try {
+    return formatDisplayDate(monthDayToIso(md, 2000));
+  } catch {
+    return md;
+  }
 }

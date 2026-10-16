@@ -1,9 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { Checkbox } from "@/components/setup/Checkbox";
-import { TemperatureInput } from "@/components/setup/TemperatureInput";
-import { Button, ChipGroup, Field, NumberInput, Select, TextInput, Textarea } from "@/components/ui";
+import { Button, Checkbox, ChipGroup, Field, NumberInput, Select, TemperatureInput, TextInput, Textarea } from "@/components/ui";
 import { FERTILIZERS } from "@/data/fertilizers";
 import { INSECTS } from "@/data/insects";
 import { TOOLS } from "@/data/tools";
@@ -173,7 +171,7 @@ export function CustomPlantForm({ initial, unit, catalogPlants, onSave, onCancel
           />
           {errors.environments && <p role="alert" className="text-xs font-medium text-danger">{errors.environments}</p>}
         </div>
-        <Checkbox label="Edible" checked={values.edible} onChange={(c) => set("edible", c)} />
+        <Checkbox label="Edible" checked={values.edible} onChange={(e) => set("edible", e.target.checked)} />
       </Section>
 
       <Section title="Light & water">
@@ -285,7 +283,7 @@ export function CustomPlantForm({ initial, unit, catalogPlants, onSave, onCancel
       </Section>
 
       <Section title="Containers">
-        <Checkbox label="Suitable for containers" checked={values.containerSuitable} onChange={(c) => set("containerSuitable", c)} />
+        <Checkbox label="Suitable for containers" checked={values.containerSuitable} onChange={(e) => set("containerSuitable", e.target.checked)} />
         {values.containerSuitable && (
           <Grid>
             {num("containerMinGallons", "Minimum container size (gallons)", { min: 0, step: 0.5 })}

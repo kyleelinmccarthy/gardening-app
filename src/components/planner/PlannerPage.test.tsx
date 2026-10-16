@@ -1,5 +1,6 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { todayIso } from "@/domain/dates";
 import { makeAppData, makeBed, makeGarden } from "@/test/fixtures";
 import { renderWithAppData } from "@/test/render";
 import { PlannerPage } from "./PlannerPage";
@@ -8,7 +9,7 @@ vi.mock("@/data/plants", async () => {
   const { makePlant } = await vi.importActual<typeof import("@/test/fixtures")>("@/test/fixtures");
   return {
     BUILTIN_PLANTS: [
-      makePlant({ id: "tomato", name: "Tomato", emoji: "🍅", companions: ["basil"], antagonists: ["fennel"], companionNotes: "Basil repels tomato pests." }),
+      makePlant({ id: "tomato", name: "Tomato", emoji: "🍅", spacingInches: 24, companions: ["basil"], antagonists: ["fennel"], companionNotes: "Basil repels tomato pests." }),
       makePlant({ id: "basil", name: "Basil", emoji: "🌿", companions: ["tomato"], spacingInches: 6, sun: ["full-sun", "partial-sun"] }),
       makePlant({ id: "fennel", name: "Fennel", emoji: "🌱", antagonists: ["tomato"], spacingInches: 12, sun: ["full-sun"] }),
       makePlant({ id: "fern", name: "Fern", emoji: "🪴", sun: ["full-shade"], spacingInches: 12 }),
@@ -67,6 +68,17 @@ describe("PlannerPage", () => {
 
     expect(screen.getByRole("button", { name: "Row 1, column 2: Basil" })).toBeInTheDocument();
     expect(getData().gardens[0].beds[0].placements).toEqual([{ plantId: "basil", x: 1, y: 0 }]);
+  });
+
+  it("creates the planned planting with a fresh id and today's local date", async () => {
+    const user = userEvent.setup();
+    const { getData } = renderWithAppData(<PlannerPage />, { data: withBed() });
+    await user.click(await screen.findByRole("button", { name: "Basil" }));
+    await user.click(screen.getByRole("button", { name: "Row 1, column 2: empty" }));
+
+    const [created] = getData().gardens[0].plantings;
+    expect(created).toMatchObject({ plantId: "basil", bedId: "bed-1", status: "planned", plantedOn: todayIso() });
+    expect(created.id).toMatch(/^planting-/);
   });
 
   it("says when a plant needs several squares", async () => {

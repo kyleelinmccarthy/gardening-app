@@ -28,6 +28,17 @@ export function formatTemperature(f: number, unit: TemperatureUnit): string {
   return unit === "C" ? `${roundDisplay(fToC(f))}°C` : `${roundDisplay(f)}°F`;
 }
 
+/** Stored °F → whole degrees in the user's unit for editing (never "-0"). */
+export function toDisplayTemp(f: number, unit: TemperatureUnit): number {
+  const v = Math.round(unit === "C" ? fToC(f) : f);
+  return v === 0 ? 0 : v;
+}
+
+/** Whole degrees in the user's unit → whole °F (the storage unit). */
+export function fromDisplayTemp(value: number, unit: TemperatureUnit): number {
+  return Math.round(unit === "C" ? cToF(value) : value);
+}
+
 /**
  * Days between the last spring frost and first fall frost ("MM-DD", non-leap
  * year). Returns 365 when either date is null (frost-free climate); wraps

@@ -2,21 +2,20 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
+import { completionActions } from "@/components/care/careModel";
 import { Badge, Button, ButtonLink, Card, PageHeader, ReasonList, Select, StatTile } from "@/components/ui";
 import { formatDisplayDate, todayIso } from "@/domain/dates";
-import type { CareTaskItem } from "@/domain/care";
+import { summarizeGarden, UPCOMING_EVENT_DAYS } from "@/domain/gardenSummary";
+import { completeTask, type CareTaskItem } from "@/domain/care";
 import type { CalendarEvent, Garden } from "@/domain/types";
 import { createId } from "@/lib/id";
 import { CALENDAR_EVENT_LABELS, CARE_EMOJI } from "@/lib/labels";
 import { useAppData } from "@/state/AppDataProvider";
-import {
-  TODAYS_CARE_LIMIT,
-  UPCOMING_EVENT_DAYS,
-  completionActions,
-  summarizeGarden,
-} from "./dashboardSummary";
 import { profileChips } from "./profileChips";
 import { WelcomeHero } from "./WelcomeHero";
+
+/** How many due tasks the dashboard lists before pointing to the care page. */
+const TODAYS_CARE_LIMIT = 5;
 
 const QUICK_LINKS = [
   { href: "/recommendations", icon: "✨", label: "Recommendations", text: "Plants matched to your garden" },
@@ -77,7 +76,7 @@ function GardenDashboard({ garden }: { garden: Garden }) {
   const plantEmoji = (id: string) => catalog.get(id)?.emoji ?? "🌱";
 
   function markDone(task: CareTaskItem) {
-    for (const action of completionActions(garden.id, task, today, createId("care"))) dispatch(action);
+    for (const action of completionActions(garden.id, completeTask(task, today, createId("care")))) dispatch(action);
   }
 
   return (

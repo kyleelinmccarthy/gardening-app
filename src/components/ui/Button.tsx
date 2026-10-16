@@ -1,7 +1,7 @@
-import type { ButtonHTMLAttributes } from "react";
+import type { ComponentProps } from "react";
 import { buttonClasses, type ButtonStyleProps } from "./button-styles";
 
-export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & ButtonStyleProps;
+export type ButtonProps = ComponentProps<"button"> & ButtonStyleProps;
 
 /**
  * Native `<button>` with design-system styling. Defaults to `type="button"`

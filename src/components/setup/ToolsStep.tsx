@@ -3,16 +3,8 @@
 import { ChipGroup } from "@/components/ui";
 import { TOOLS } from "@/data/tools";
 import type { ToolId, ToolInfo } from "@/domain/types";
+import { TOOL_CATEGORY_LABELS } from "@/lib/labels";
 import type { StepProps } from "./step-props";
-
-export const TOOL_CATEGORY_LABELS: Record<ToolInfo["category"], string> = {
-  "hand-tool": "Hand tools",
-  watering: "Watering",
-  structure: "Structures & supports",
-  indoor: "Indoor growing",
-  protection: "Protection & mulch",
-  soil: "Soil & compost",
-};
 
 const CATEGORY_ORDER = Object.keys(TOOL_CATEGORY_LABELS) as ToolInfo["category"][];
 

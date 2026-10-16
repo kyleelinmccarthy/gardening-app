@@ -15,7 +15,7 @@ import {
   sunWarning,
 } from "./plannerModel";
 
-const tomato = makePlant({ id: "tomato", name: "Tomato", companions: ["basil"], antagonists: ["fennel"], companionNotes: "Basil repels pests." });
+const tomato = makePlant({ id: "tomato", name: "Tomato", spacingInches: 24, companions: ["basil"], antagonists: ["fennel"], companionNotes: "Basil repels pests." });
 const basil = makePlant({ id: "basil", name: "Basil", companions: ["tomato"], sun: ["full-sun", "partial-sun"], spacingInches: 6 });
 const fennel = makePlant({ id: "fennel", name: "Fennel", scientificName: "Foeniculum vulgare", antagonists: ["tomato"] });
 const catalog = createPlantCatalog([tomato, basil, fennel]);

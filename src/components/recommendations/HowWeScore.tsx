@@ -1,4 +1,5 @@
 import { Card } from "@/components/ui";
+import { SCORE_CONFIG } from "@/domain/recommendation";
 
 const FACTORS: readonly { title: string; text: string }[] = [
   { title: "Sun & light", text: "Outdoor sun exposure, or the light in your home for indoor gardens (a grow light can make up for dim rooms)." },
@@ -16,7 +17,7 @@ export function HowWeScore() {
   return (
     <Card
       title="How we score"
-      description="Every plant starts at 60 out of 100. Each factor below adds or subtracts points, and anything that would not survive or would be unsafe caps the score and marks the plant as not recommended."
+      description={`Every plant starts at ${SCORE_CONFIG.baseline} out of 100. Each factor below adds or subtracts points, and anything that would not survive or would be unsafe caps the score and marks the plant as not recommended.`}
     >
       <ul className="grid gap-3 text-sm sm:grid-cols-2">
         {FACTORS.map((f) => (
@@ -26,7 +27,8 @@ export function HowWeScore() {
         ))}
       </ul>
       <p className="mt-3 text-sm text-muted">
-        80+ is a great match, 60+ a good match, and anything lower is possible with some extra care.
+        {SCORE_CONFIG.greatMin}+ is a great match, {SCORE_CONFIG.goodMin}+ a good match, and anything lower is possible with
+        some extra care.
       </p>
     </Card>
   );

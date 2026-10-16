@@ -1,22 +1,19 @@
 import { createPlantCatalog } from "@/domain/catalog";
 import type { CareTaskItem } from "@/domain/care";
-import type { CareLogEntry, JournalEntry, Planting, Reminder } from "@/domain/types";
+import type { CareLogEntry, JournalEntry, Reminder } from "@/domain/types";
 import { makeGarden, makePlant } from "@/test/fixtures";
 import {
-  careContext,
   completionActions,
   dueLabel,
   filterCareLog,
   groupTasksByType,
   intervalLabel,
-  lastLogDate,
   partitionTasks,
   plantingIntervals,
   plantingOptions,
   plantingLabel,
   sortJournal,
   sortReminders,
-  statusChanges,
 } from "./careModel";
 
 const task = (overrides: Partial<CareTaskItem>): CareTaskItem => ({
@@ -35,32 +32,6 @@ const log = (id: string, date: string, overrides: Partial<CareLogEntry> = {}): C
   date,
   plantingId: "p1",
   ...overrides,
-});
-
-describe("careContext", () => {
-  it("uses outdoor climate humidity outdoors and indoor humidity indoors", () => {
-    const outdoor = makeGarden().profile;
-    expect(careContext(outdoor)).toEqual({ setting: "outdoor", summerHighF: outdoor.climate.summerHighF, humidity: "average" });
-    const indoor = {
-      ...outdoor,
-      setting: "indoor" as const,
-      indoor: { light: "medium" as const, averageTempF: 68, humidity: "low" as const },
-    };
-    expect(careContext(indoor)).toMatchObject({ setting: "indoor", humidity: "low" });
-  });
-});
-
-describe("lastLogDate", () => {
-  const entries = [log("1", "2026-05-01"), log("2", "2026-05-08"), log("3", "2026-05-09", { type: "fertilize" }), log("4", "2026-05-10", { plantingId: "p2" })];
-
-  it("finds the newest matching entry", () => {
-    expect(lastLogDate(entries, "p1", "water")).toBe("2026-05-08");
-    expect(lastLogDate(entries, "p1", "fertilize")).toBe("2026-05-09");
-  });
-
-  it("is undefined without a match", () => {
-    expect(lastLogDate(entries, "p1", "prune")).toBeUndefined();
-  });
 });
 
 describe("task grouping", () => {
@@ -102,18 +73,6 @@ describe("completionActions", () => {
     expect(completionActions("g1", { reminderUpdate: { id: "r1", done: true } })).toEqual([
       { type: "reminder/update", gardenId: "g1", reminderId: "r1", changes: { done: true } },
     ]);
-  });
-});
-
-describe("statusChanges", () => {
-  const planting = { status: "planned", plantedOn: "2026-01-01" } as Planting;
-
-  it("sets plantedOn to today when a planned planting starts growing", () => {
-    expect(statusChanges(planting, "growing", "2026-05-10")).toEqual({ status: "growing", plantedOn: "2026-05-10" });
-  });
-
-  it("only changes status otherwise", () => {
-    expect(statusChanges({ ...planting, status: "growing" }, "harvested", "2026-05-10")).toEqual({ status: "harvested" });
   });
 });
 

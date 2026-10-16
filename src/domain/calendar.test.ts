@@ -4,7 +4,7 @@ import {
   eventsInMonth,
   upcomingEvents,
 } from "./calendar";
-import { makePlant } from "./test-fixtures";
+import { makePlant } from "@/test/fixtures";
 import type { CalendarEvent, ClimateProfile } from "./types";
 
 const climate = (overrides: Partial<ClimateProfile> = {}): ClimateProfile => ({

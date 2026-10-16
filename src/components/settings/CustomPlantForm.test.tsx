@@ -92,6 +92,17 @@ describe("CustomPlantForm", () => {
     expect(onSave.mock.calls[0][0].temperature).toEqual({ minF: 23, idealMinF: 60, idealMaxF: 80, maxF: 95 });
   });
 
+  it("blocks saving while a temperature field is cleared", async () => {
+    const { user, onSave } = setup();
+    await user.type(screen.getByLabelText("Name"), "X");
+    const max = screen.getByLabelText("Heat stress above (°F)");
+    await user.clear(max);
+    expect(max).toHaveValue(null);
+    await user.click(screen.getByRole("button", { name: "Add plant" }));
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByText(/Enter all four temperatures/)).toBeInTheDocument();
+  });
+
   it("reports out-of-order temperatures", async () => {
     const { user, onSave } = setup();
     await user.type(screen.getByLabelText("Name"), "X");

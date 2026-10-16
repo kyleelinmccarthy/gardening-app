@@ -1,15 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { ConfirmButton } from "@/components/planner/ConfirmButton";
 import { PlantLink } from "@/components/plants/PlantLink";
-import { Badge, Button, Field, NumberInput, Select, TextInput } from "@/components/ui";
+import { Badge, Button, Checkbox, ConfirmButton, Field, NumberInput, Select, TextInput } from "@/components/ui";
+import { lastLogDate } from "@/domain/care";
 import { formatDisplayDate } from "@/domain/dates";
+import { applyStatusChange } from "@/domain/plantings";
 import type { CareLogEntry, Garden, Plant, Planting, PlantingStatus } from "@/domain/types";
 import { PLANTING_STATUS_LABELS, toOptions } from "@/lib/labels";
 import { createId } from "@/lib/id";
 import { useAppData } from "@/state/AppDataProvider";
-import { intervalLabel, lastLogDate, plantingIntervals, statusChanges } from "./careModel";
+import { intervalLabel, plantingIntervals } from "./careModel";
 
 const STATUS_OPTIONS = toOptions(PLANTING_STATUS_LABELS);
 
@@ -68,7 +69,7 @@ export function PlantingCard({ garden, planting, plant, today }: PlantingCardPro
           <Select
             options={STATUS_OPTIONS}
             value={planting.status}
-            onChange={(e) => update(statusChanges(planting, e.target.value as PlantingStatus, today))}
+            onChange={(e) => update(applyStatusChange(planting, e.target.value as PlantingStatus, today))}
           />
         </Field>
         <Field label={`Planted date of ${name}`}>
@@ -90,15 +91,12 @@ export function PlantingCard({ garden, planting, plant, today }: PlantingCardPro
             onBlur={() => setQuantity(String(planting.quantity))}
           />
         </Field>
-        <label className="flex items-center gap-2 self-end pb-2 text-sm">
-          <input
-            type="checkbox"
-            className="h-4 w-4 accent-primary"
-            checked={planting.inContainer}
-            onChange={(e) => update({ inContainer: e.target.checked })}
-          />
-          {`${name} is in a container`}
-        </label>
+        <Checkbox
+          className="self-end pb-2"
+          label={`${name} is in a container`}
+          checked={planting.inContainer}
+          onChange={(e) => update({ inContainer: e.target.checked })}
+        />
         <Field label={`Notes on ${name}`} className="sm:col-span-2 lg:col-span-4">
           <TextInput
             value={notes}

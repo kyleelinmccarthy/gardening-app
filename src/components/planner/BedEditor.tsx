@@ -1,16 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Badge, Button, Card } from "@/components/ui";
+import { Badge, Button, Card, ConfirmButton } from "@/components/ui";
 import { analyzeBed, placementConflicts, suggestCompanions } from "@/domain/companions";
+import { todayIso } from "@/domain/dates";
 import { recommendPlants } from "@/domain/recommendation";
 import type { Bed, Garden } from "@/domain/types";
+import { createId } from "@/lib/id";
 import { BED_KIND_LABELS, SUN_LABELS } from "@/lib/labels";
 import { useAppData } from "@/state/AppDataProvider";
 import { AnalysisPanel } from "./AnalysisPanel";
 import { BedForm } from "./BedForm";
 import { BedGrid } from "./BedGrid";
-import { ConfirmButton } from "./ConfirmButton";
 import { PlantPalette, type PlannerTool } from "./PlantPalette";
 import {
   bedToFormValues,
@@ -66,7 +67,16 @@ export function BedEditor({ garden, bed, onDeleted }: BedEditorProps) {
 
   function handleCellClick(x: number, y: number) {
     if (tool?.kind === "plant") {
-      dispatch({ type: "bed/place", gardenId: garden.id, bedId: bed.id, plantId: tool.plantId, x, y });
+      dispatch({
+        type: "bed/place",
+        gardenId: garden.id,
+        bedId: bed.id,
+        plantId: tool.plantId,
+        x,
+        y,
+        plantingId: createId("planting"),
+        plantedOn: todayIso(),
+      });
     } else if (tool?.kind === "eraser") {
       dispatch({ type: "bed/clearCell", gardenId: garden.id, bedId: bed.id, x, y });
     }

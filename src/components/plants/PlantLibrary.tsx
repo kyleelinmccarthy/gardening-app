@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Button, Card, ChipGroup, EmptyState, Field, Select, TextInput } from "@/components/ui";
+import { Button, Card, Checkbox, ChipGroup, EmptyState, Field, LoadingState, Select, TextInput } from "@/components/ui";
 import { filterPlants } from "@/domain/filters";
 import { evaluatePlant } from "@/domain/recommendation";
 import { DIFFICULTIES, GARDEN_GOALS, PLANT_CATEGORIES, SUN_EXPOSURES, WATER_NEEDS } from "@/domain/types";
@@ -17,7 +17,6 @@ import {
 } from "@/lib/labels";
 import { useAppData } from "@/state/AppDataProvider";
 import { AddToGardenButton } from "./AddToGardenButton";
-import { CheckboxField } from "./CheckboxField";
 import {
   countActiveFilters,
   DEFAULT_LIBRARY_STATE,
@@ -26,7 +25,6 @@ import {
   type LibrarySort,
   type LibraryState,
 } from "./libraryFilters";
-import { LoadingSkeleton } from "./LoadingSkeleton";
 import { PlantCard } from "./PlantCard";
 
 const CATEGORY_OPTIONS = PLANT_CATEGORIES.map((value) => ({
@@ -62,7 +60,7 @@ export function PlantLibrary() {
     return sortPlants(matches, state.sort, (p) => scores.get(p.id) ?? 0);
   }, [catalog, state, profile]);
 
-  if (!hydrated) return <LoadingSkeleton />;
+  if (!hydrated) return <LoadingState />;
 
   const activeCount = countActiveFilters(state);
   const sortOptions = [
@@ -135,21 +133,21 @@ export function PlantLibrary() {
             </Field>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <CheckboxField label="Container-friendly" checked={state.containerOnly} onChange={(v) => set("containerOnly", v)} />
-            <CheckboxField label="Edible only" checked={state.edibleOnly} onChange={(v) => set("edibleOnly", v)} />
-            <CheckboxField
+            <Checkbox label="Container-friendly" checked={state.containerOnly} onChange={(e) => set("containerOnly", e.target.checked)} />
+            <Checkbox label="Edible only" checked={state.edibleOnly} onChange={(e) => set("edibleOnly", e.target.checked)} />
+            <Checkbox
               label="Safe for my pets"
               hint={profile ? (profile.pets.length ? undefined : "Your garden has no pets") : "Set up a garden to use this"}
               checked={state.petSafe}
               disabled={!profile}
-              onChange={(v) => set("petSafe", v)}
+              onChange={(e) => set("petSafe", e.target.checked)}
             />
-            <CheckboxField
+            <Checkbox
               label="Exclude my allergens"
               hint={profile ? (profile.allergies.length ? undefined : "No allergies in your profile") : "Set up a garden to use this"}
               checked={state.excludeMyAllergens}
               disabled={!profile}
-              onChange={(v) => set("excludeMyAllergens", v)}
+              onChange={(e) => set("excludeMyAllergens", e.target.checked)}
             />
           </div>
         </div>

@@ -1,9 +1,11 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { ButtonLink, EmptyState } from "@/components/ui";
 import type { Garden } from "@/domain/types";
 import { useAppData } from "@/state/AppDataProvider";
+import { ButtonLink } from "./ButtonLink";
+import { EmptyState } from "./EmptyState";
+import { LoadingState } from "./LoadingState";
 
 export interface GardenGateProps {
   /** Rendered only once data is loaded and a garden is active. */
@@ -11,19 +13,13 @@ export interface GardenGateProps {
 }
 
 /**
- * Shared page guard: "Loading…" until saved data has hydrated, a prompt to
- * set up a garden when none is active, otherwise the page body.
- * (Shared by /planner, /calendar and /care; a candidate to hoist into `ui/`.)
+ * Page guard for garden-scoped pages (planner, calendar, care): a loading
+ * placeholder until saved data has hydrated, a prompt to set up a garden when
+ * none is active, otherwise the page body for the active garden.
  */
 export function GardenGate({ children }: GardenGateProps) {
   const { hydrated, activeGarden } = useAppData();
-  if (!hydrated) {
-    return (
-      <p role="status" className="text-muted">
-        Loading…
-      </p>
-    );
-  }
+  if (!hydrated) return <LoadingState />;
   if (!activeGarden) {
     return (
       <EmptyState

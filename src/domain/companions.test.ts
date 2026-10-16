@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { analyzeBed, placementConflicts, plantsPerCell, relationBetween, suggestCompanions } from "./companions";
 import { createPlantCatalog } from "./catalog";
-import { makeBed, makePlant } from "./test-fixtures";
+import { makeBed, makePlant } from "@/test/fixtures";
 
 const tomato = makePlant({ id: "tomato", name: "Tomato", companions: ["basil", "carrot"], antagonists: ["fennel"] });
 const basil = makePlant({ id: "basil", name: "Basil", companions: ["tomato"] });

@@ -3,9 +3,9 @@
  * labels. Scheduling rules themselves live in `@/domain/care`.
  */
 import {
+  careContextFor,
   fertilizeIntervalDays,
   wateringIntervalDays,
-  type CareTaskContext,
   type CareTaskItem,
   type TaskCompletion,
 } from "@/domain/care";
@@ -18,29 +18,10 @@ import type {
   JournalEntry,
   Plant,
   Planting,
-  PlantingStatus,
   PlantCatalog,
   Reminder,
 } from "@/domain/types";
 import type { AppAction } from "@/state/appReducer";
-
-/** Humidity that matters for watering: outdoor climate, or the indoor room. */
-export function careContext(profile: GardenProfile): CareTaskContext {
-  return {
-    setting: profile.setting,
-    summerHighF: profile.climate.summerHighF,
-    humidity: profile.setting === "indoor" ? profile.indoor.humidity : profile.climate.humidity,
-  };
-}
-
-/** ISO date of the newest log entry for a planting and care type. */
-export function lastLogDate(log: readonly CareLogEntry[], plantingId: string, type: CareType): string | undefined {
-  let latest: string | undefined;
-  for (const e of log) {
-    if (e.plantingId === plantingId && e.type === type && (latest === undefined || e.date > latest)) latest = e.date;
-  }
-  return latest;
-}
 
 // --- tasks -----------------------------------------------------------------
 
@@ -92,15 +73,6 @@ export function completionActions(gardenId: string, completion: TaskCompletion):
 
 // --- plantings -------------------------------------------------------------
 
-/** Planned → growing also stamps today as the planting date. */
-export function statusChanges(
-  planting: Pick<Planting, "status">,
-  next: PlantingStatus,
-  today: string,
-): Partial<Pick<Planting, "status" | "plantedOn">> {
-  return planting.status === "planned" && next === "growing" ? { status: next, plantedOn: today } : { status: next };
-}
-
 export interface PlantingIntervals {
   /** Days between waterings with today's conditions. */
   waterEvery: number;
@@ -115,7 +87,7 @@ export function plantingIntervals(
   profile: GardenProfile,
   today: string,
 ): PlantingIntervals {
-  const ctx = careContext(profile);
+  const ctx = careContextFor(profile);
   const month = Number(today.slice(5, 7));
   return {
     waterEvery: wateringIntervalDays(plant, {

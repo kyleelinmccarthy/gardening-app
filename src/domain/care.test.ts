@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { completeTask, fertilizeIntervalDays, getCareTasks, wateringIntervalDays } from "./care";
+import { careContextFor, completeTask, fertilizeIntervalDays, getCareTasks, lastLogDate, wateringIntervalDays } from "./care";
 import { createPlantCatalog } from "./catalog";
-import { makeBed, makeGarden, makePlant, makePlanting } from "./test-fixtures";
-import type { CareTask, Plant } from "./types";
+import { makeBed, makeGarden, makePlant, makePlanting, makeProfile } from "@/test/fixtures";
+import type { CareLogEntry, CareTask, Plant } from "./types";
 
 const outdoor = { setting: "outdoor" as const, inContainer: false };
 
@@ -282,5 +282,41 @@ describe("completeTask", () => {
   it("does not create a log for reminders", () => {
     const task: CareTask = { ...base, id: "reminder:r1", type: "custom", reminderId: "r1" };
     expect(completeTask(task, "2025-05-05", "x").log).toBeUndefined();
+  });
+});
+
+describe("lastLogDate", () => {
+  const entry = (id: string, date: string, overrides: Partial<CareLogEntry> = {}): CareLogEntry => ({
+    id,
+    type: "water",
+    date,
+    plantingId: "p1",
+    ...overrides,
+  });
+  const entries = [
+    entry("1", "2026-05-01"),
+    entry("2", "2026-05-08"),
+    entry("3", "2026-05-09", { type: "fertilize" }),
+    entry("4", "2026-05-10", { plantingId: "p2" }),
+  ];
+
+  it("finds the newest matching entry", () => {
+    expect(lastLogDate(entries, "p1", "water")).toBe("2026-05-08");
+    expect(lastLogDate(entries, "p1", "fertilize")).toBe("2026-05-09");
+  });
+
+  it("is undefined without a match", () => {
+    expect(lastLogDate(entries, "p1", "prune")).toBeUndefined();
+    expect(lastLogDate([], "p1", "water")).toBeUndefined();
+  });
+});
+
+describe("careContextFor", () => {
+  it("uses outdoor climate humidity outdoors and indoor humidity indoors", () => {
+    const outdoor = makeProfile();
+    outdoor.climate.humidity = "high";
+    outdoor.indoor.humidity = "low";
+    expect(careContextFor(outdoor)).toEqual({ setting: "outdoor", summerHighF: outdoor.climate.summerHighF, humidity: "high" });
+    expect(careContextFor({ ...outdoor, setting: "indoor" })).toMatchObject({ setting: "indoor", humidity: "low" });
   });
 });

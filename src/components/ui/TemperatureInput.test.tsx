@@ -1,34 +1,23 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { TemperatureUnit } from "@/domain/types";
 import { TemperatureInput } from "./TemperatureInput";
-import { fromDisplayTemp, toDisplayTemp } from "./temperature";
 
-function Harness({ initial, unit }: { initial: number; unit: TemperatureUnit }) {
-  const [f, setF] = useState(initial);
+function Harness({ initial, unit }: { initial: number | null; unit: TemperatureUnit }) {
+  const [f, setF] = useState<number | null>(initial);
   return (
     <>
       <label>
         Temp
         <TemperatureInput value={f} onChange={setF} unit={unit} />
       </label>
-      <output data-testid="stored">{f}</output>
+      <output data-testid="stored">{f === null ? "empty" : f}</output>
       <button onClick={() => setF(100)}>external</button>
     </>
   );
 }
-
-describe("temperature conversion helpers", () => {
-  it("round-trips whole degrees", () => {
-    for (let c = -40; c <= 45; c++) expect(toDisplayTemp(fromDisplayTemp(c, "C"), "C")).toBe(c);
-  });
-  it("is the identity in °F", () => {
-    expect(toDisplayTemp(72, "F")).toBe(72);
-    expect(fromDisplayTemp(72, "F")).toBe(72);
-  });
-});
 
 describe("TemperatureInput", () => {
   it("shows the stored °F value converted to °C and stores °F", async () => {
@@ -47,9 +36,32 @@ describe("TemperatureInput", () => {
     const input = screen.getByLabelText("Temp");
     await user.clear(input);
     expect(input).toHaveValue(null);
+    expect(screen.getByTestId("stored")).toHaveTextContent("empty");
     await user.type(input, "-5");
     expect(input).toHaveValue(-5);
     expect(screen.getByTestId("stored")).toHaveTextContent("-5");
+  });
+
+  it("reports null when the field is cleared, in either unit", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <label>
+        Temp
+        <TemperatureInput value={68} onChange={onChange} unit="C" />
+      </label>,
+    );
+    await user.clear(screen.getByLabelText("Temp"));
+    expect(onChange).toHaveBeenLastCalledWith(null);
+  });
+
+  it("shows an empty field for a null value and reports whole °F when typed into", async () => {
+    const user = userEvent.setup();
+    render(<Harness initial={null} unit="C" />);
+    const input = screen.getByLabelText("Temp");
+    expect(input).toHaveValue(null);
+    await user.type(input, "30");
+    expect(screen.getByTestId("stored")).toHaveTextContent("86");
   });
 
   it("follows external changes to the value", async () => {

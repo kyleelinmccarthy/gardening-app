@@ -44,6 +44,10 @@ describe("emptyPlantForm", () => {
 });
 
 describe("toPlant", () => {
+  it("refuses to build a plant from an unvalidated form with an empty temperature", () => {
+    expect(() => toPlant(valid({ maxF: null }), "x")).toThrow(/required/);
+  });
+
   it("builds a custom plant that the app schema accepts", () => {
     const plant = toPlant(valid({ careTips: "Pinch flowers\n\n  Water at the base  " }), "custom-purple-basil-abc123");
     expect(plant).toMatchObject({
@@ -171,6 +175,8 @@ describe("validatePlantForm", () => {
     expect(validatePlantForm(valid({ minF: 70, idealMinF: 60 })).minF).toBeTruthy();
     expect(validatePlantForm(valid({ idealMaxF: 100 })).minF).toBeTruthy();
     expect(validatePlantForm(valid({ maxF: Number.NaN })).minF).toBeTruthy();
+    expect(validatePlantForm(valid({ maxF: null })).minF).toMatch(/Enter all four temperatures/);
+    expect(validatePlantForm(valid({ minF: null, idealMinF: null })).minF).toMatch(/Enter all four temperatures/);
     expect(validatePlantForm(valid({ minF: 60, idealMinF: 60, idealMaxF: 60, maxF: 60 })).minF).toBeUndefined();
   });
 

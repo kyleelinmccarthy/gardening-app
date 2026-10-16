@@ -1,7 +1,6 @@
 "use client";
 
-import { GardenGate } from "@/components/planner/GardenGate";
-import { PageHeader, Tabs } from "@/components/ui";
+import { GardenGate, PageHeader, Tabs } from "@/components/ui";
 import { CareLogTab } from "./CareLogTab";
 import { JournalTab } from "./JournalTab";
 import { MyPlantsTab } from "./MyPlantsTab";

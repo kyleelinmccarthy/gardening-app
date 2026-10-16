@@ -1,6 +1,4 @@
 import { DEFAULT_CELL_SIZE_INCHES, MAX_BED_DIMENSION, MIN_BED_DIMENSION, isContainerBedKind } from "@/domain/constants";
-import { todayIso } from "@/domain/dates";
-import { createId } from "@/lib/id";
 import { withoutUndefined } from "@/lib/object";
 import { isCellInBed, sanitizeAppData } from "@/storage/sanitize";
 import type {
@@ -39,10 +37,10 @@ export type AppAction =
       plantId: string;
       x: number;
       y: number;
-      /** Id for an auto-created planting (generated when omitted). */
-      plantingId?: string;
-      /** ISO date for an auto-created planting (today when omitted). */
-      plantedOn?: string;
+      /** Id for the planting auto-created when none exists (the reducer never generates ids). */
+      plantingId: string;
+      /** ISO date for the auto-created planting (the reducer never reads the clock). */
+      plantedOn: string;
     }
   | { type: "bed/clearCell"; gardenId: string; bedId: string; x: number; y: number }
   | { type: "bed/clearAll"; gardenId: string; bedId: string }
@@ -110,6 +108,36 @@ function withoutKey<T extends object, K extends keyof T>(obj: T, key: K): Omit<T
   return rest;
 }
 
+/**
+ * Removes the plantings matching `shouldRemove`. Care history and journal stay
+ * (they may point at plantings that no longer exist); reminders lose their link.
+ * Returns the same garden when nothing matched.
+ */
+function removePlantings(garden: Garden, shouldRemove: (planting: Planting) => boolean): Garden {
+  const removed = new Set(garden.plantings.filter(shouldRemove).map((p) => p.id));
+  if (removed.size === 0) return garden;
+  return {
+    ...garden,
+    plantings: garden.plantings.filter((p) => !removed.has(p.id)),
+    reminders: garden.reminders.map((r) =>
+      r.plantingId !== undefined && removed.has(r.plantingId) ? withoutKey(r, "plantingId") : r,
+    ),
+  };
+}
+
+/** Clears every cell holding `plantId`, in all beds. Returns the same garden when none do. */
+function removePlacements(garden: Garden, plantId: string): Garden {
+  if (!garden.beds.some((b) => b.placements.some((p) => p.plantId === plantId))) return garden;
+  return {
+    ...garden,
+    beds: garden.beds.map((b) =>
+      b.placements.some((p) => p.plantId === plantId)
+        ? { ...b, placements: b.placements.filter((p) => p.plantId !== plantId) }
+        : b,
+    ),
+  };
+}
+
 function placeInBed(
   garden: Garden,
   action: Extract<AppAction, { type: "bed/place" }>,
@@ -133,11 +161,11 @@ function placeInBed(
     : [
         ...garden.plantings,
         {
-          id: action.plantingId ?? createId("planting"),
+          id: action.plantingId,
           plantId: action.plantId,
           bedId: bed.id,
           quantity: 1,
-          plantedOn: action.plantedOn ?? todayIso(),
+          plantedOn: action.plantedOn,
           status: "planned" as const,
           inContainer: isContainerBedKind(bed.kind),
         },
@@ -266,15 +294,7 @@ export function appReducer(state: AppData, action: AppAction): AppData {
         return plantings === g.plantings ? g : { ...g, plantings };
       });
     case "planting/delete":
-      return updateGarden(state, action.gardenId, (g) => {
-        const plantings = removeById(g.plantings, action.plantingId);
-        if (plantings === g.plantings) return g;
-        // Care history and journal stay; only reminders lose their link.
-        const reminders = g.reminders.map((r) =>
-          r.plantingId === action.plantingId ? withoutKey(r, "plantingId") : r,
-        );
-        return { ...g, plantings, reminders };
-      });
+      return updateGarden(state, action.gardenId, (g) => removePlantings(g, (p) => p.id === action.plantingId));
 
     // care log
     case "care/log":
@@ -322,8 +342,14 @@ export function appReducer(state: AppData, action: AppAction): AppData {
         : [...state.customPlants, plant];
       return { ...state, customPlants };
     }
-    case "customPlant/delete":
-      return { ...state, customPlants: state.customPlants.filter((p) => p.id !== action.plantId) };
+    case "customPlant/delete": {
+      // A deleted plant cannot stay in any garden: drop its placements and plantings everywhere.
+      const cleaned = state.gardens.map((g) =>
+        removePlantings(removePlacements(g, action.plantId), (p) => p.plantId === action.plantId),
+      );
+      const gardens = cleaned.some((g, i) => g !== state.gardens[i]) ? cleaned : state.gardens;
+      return { ...state, gardens, customPlants: state.customPlants.filter((p) => p.id !== action.plantId) };
+    }
     case "settings/update":
       return { ...state, settings: { ...state.settings, ...withoutUndefined(action.changes) } };
     case "data/replace":

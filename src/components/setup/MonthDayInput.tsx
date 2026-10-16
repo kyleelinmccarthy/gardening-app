@@ -2,7 +2,7 @@
 
 import { useId } from "react";
 import { Select } from "@/components/ui";
-import { MONTH_NAMES } from "./month-names";
+import { MONTH_NAMES_LONG } from "@/domain/dates";
 
 export interface MonthDayInputProps {
   label: string;
@@ -14,7 +14,7 @@ export interface MonthDayInputProps {
 }
 
 const DAYS = Array.from({ length: 31 }, (_, i) => ({ value: String(i + 1).padStart(2, "0"), label: String(i + 1) }));
-const MONTHS = MONTH_NAMES.map((label, i) => ({ value: String(i + 1).padStart(2, "0"), label }));
+const MONTHS = MONTH_NAMES_LONG.map((label, i) => ({ value: String(i + 1).padStart(2, "0"), label }));
 
 /** Month + day pair of selects for a year-less date such as a frost date. */
 export function MonthDayInput({ label, value, onChange, error, disabled }: MonthDayInputProps) {

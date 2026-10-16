@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { filterPlants } from "./filters";
-import { makePlant } from "./test-fixtures";
+import { makePlant } from "@/test/fixtures";
 
 const basil = makePlant({
   id: "basil",

@@ -6,7 +6,7 @@ import {
   DEFAULT_RULES,
   type Rule,
 } from "./recommendation";
-import { makePlant, makeProfile } from "./test-fixtures";
+import { makePlant, makeProfile } from "@/test/fixtures";
 import type { IndoorLight, Reason, ToolId, Toxicity } from "./types";
 
 const find = (reasons: Reason[], topic: Reason["topic"], kind?: Reason["kind"]) =>

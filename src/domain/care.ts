@@ -4,6 +4,7 @@ import type {
   CareTask,
   CareType,
   Garden,
+  GardenProfile,
   GardenSetting,
   Humidity,
   Plant,
@@ -97,7 +98,8 @@ export interface CareTaskContext {
   humidity: Humidity;
 }
 
-function lastLogDate(log: readonly CareLogEntry[], plantingId: string, type: CareType): string | undefined {
+/** ISO date of the newest log entry for a planting and care type. */
+export function lastLogDate(log: readonly CareLogEntry[], plantingId: string, type: CareType): string | undefined {
   let latest: string | undefined;
   for (const entry of log) {
     if (entry.plantingId === plantingId && entry.type === type && (latest === undefined || entry.date > latest)) {
@@ -105,6 +107,15 @@ function lastLogDate(log: readonly CareLogEntry[], plantingId: string, type: Car
     }
   }
   return latest;
+}
+
+/** Settings the care scheduler needs from a garden profile (indoor humidity when indoors). */
+export function careContextFor(profile: GardenProfile): CareTaskContext {
+  return {
+    setting: profile.setting,
+    summerHighF: profile.climate.summerHighF,
+    humidity: profile.setting === "indoor" ? profile.indoor.humidity : profile.climate.humidity,
+  };
 }
 
 function pestDetail(plant: Plant): string {

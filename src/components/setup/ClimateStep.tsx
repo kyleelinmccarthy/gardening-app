@@ -1,15 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Field, Select, TextInput } from "@/components/ui";
+import { Button, Checkbox, Field, Select, TemperatureInput, TextInput } from "@/components/ui";
 import { ZONES } from "@/data/zones";
 import { formatTemperature } from "@/domain/climate";
 import { HUMIDITY_LABELS, INDOOR_LIGHT_LABELS, toOptions } from "@/lib/labels";
 import { HUMIDITY_LEVELS, INDOOR_LIGHTS } from "@/domain/types";
-import { Checkbox } from "./Checkbox";
 import { MonthDayInput } from "./MonthDayInput";
 import type { StepProps } from "./step-props";
-import { TemperatureInput } from "./TemperatureInput";
 import { lookupZoneByZip, type ZipLookupResult } from "./zipLookup";
 
 export interface ClimateStepProps extends StepProps {
@@ -101,7 +99,7 @@ export function ClimateStep({ state, errors, dispatch, unit, lookupZone = (zip) 
           label="Frost-free climate"
           hint="Frost never or very rarely happens where I live."
           checked={state.frostFree}
-          onChange={(frostFree) => dispatch({ type: "setFrostFree", frostFree })}
+          onChange={(e) => dispatch({ type: "setFrostFree", frostFree: e.target.checked })}
         />
         <div className="grid gap-4 sm:grid-cols-2">
           <MonthDayInput

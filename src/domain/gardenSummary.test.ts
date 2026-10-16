@@ -1,19 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { createPlantCatalog } from "@/domain/catalog";
-import { createDefaultProfile } from "@/domain/defaults";
-import type { Planting } from "@/domain/types";
-import { makeBed, makeGarden, makePlant } from "@/test/fixtures";
+import { makeBed, makeGarden, makePlant, makeProfile } from "@/test/fixtures";
+import { createPlantCatalog } from "./catalog";
 import {
   activePlants,
-  careContextFor,
-  completionActions,
   findBedConflicts,
   findSafetyAlerts,
   summarizeGarden,
   upcomingPlantingEvents,
-} from "./dashboardSummary";
+} from "./gardenSummary";
+import type { Planting } from "./types";
 
-const tomato = makePlant({ id: "tomato", name: "Tomato", companions: ["basil"], antagonists: ["fennel"] });
+const mildToxicity = { cat: "mild", dog: "mild", horse: "mild", bird: "mild", rabbit: "mild", human: "non-toxic" } as const;
+const tomato = makePlant({
+  id: "tomato",
+  name: "Tomato",
+  companions: ["basil"],
+  antagonists: ["fennel"],
+  planting: { transplantWeeks: 2 },
+  toxicity: mildToxicity,
+});
 const basil = makePlant({ id: "basil", name: "Basil", companions: ["tomato"], toxicity: { ...tomato.toxicity, cat: "non-toxic", dog: "non-toxic", horse: "non-toxic", bird: "non-toxic", rabbit: "non-toxic", human: "non-toxic" } });
 const fennel = makePlant({ id: "fennel", name: "Fennel", antagonists: ["tomato"] });
 const lily = makePlant({
@@ -50,16 +55,6 @@ describe("activePlants", () => {
   });
 });
 
-describe("careContextFor", () => {
-  it("uses indoor humidity for indoor gardens and climate humidity outdoors", () => {
-    const outdoor = createDefaultProfile();
-    outdoor.climate.humidity = "high";
-    outdoor.indoor.humidity = "low";
-    expect(careContextFor(outdoor)).toEqual({ setting: "outdoor", summerHighF: outdoor.climate.summerHighF, humidity: "high" });
-    expect(careContextFor({ ...outdoor, setting: "indoor" }).humidity).toBe("low");
-  });
-});
-
 describe("upcomingPlantingEvents", () => {
   const garden = makeGarden({ plantings: [planting("1", "tomato", "planned")] }); // last frost 04-15, transplant +2w
 
@@ -71,6 +66,18 @@ describe("upcomingPlantingEvents", () => {
   it("looks into next year when the season has passed", () => {
     const events = upcomingPlantingEvents(garden, catalog, "2026-12-28", 140);
     expect(events.some((e) => e.start.startsWith("2027"))).toBe(true);
+  });
+
+  it("includes windows that began last year and run into this one", () => {
+    // Fall sow at the first frost (Dec 20) runs Dec 20 - Jan 2, built from the previous year's calendar.
+    const fallSower = makePlant({ id: "kale", name: "Kale", planting: { fallSowWeeksBeforeFirstFrost: 0 } });
+    const climate = { ...makeProfile().climate, firstFrost: "12-20" };
+    const wintry = makeGarden({
+      profile: makeProfile({ climate }),
+      plantings: [planting("1", "kale", "planned")],
+    });
+    const events = upcomingPlantingEvents(wintry, createPlantCatalog([fallSower]), "2026-01-02", 14);
+    expect(events.map((e) => [e.plantId, e.type, e.start, e.end])).toContainEqual(["kale", "fall-sow", "2025-12-20", "2026-01-02"]);
   });
 
   it("is empty with no active plantings or far from any window", () => {
@@ -101,7 +108,7 @@ describe("findBedConflicts", () => {
 });
 
 describe("findSafetyAlerts", () => {
-  const profile = createDefaultProfile({ pets: ["cat"], allergies: ["pollen"] });
+  const profile = makeProfile({ pets: ["cat"], allergies: ["pollen"] });
 
   it("flags active plants that are toxic to pets or trigger allergies, severe first", () => {
     const garden = makeGarden({
@@ -134,24 +141,5 @@ describe("summarizeGarden", () => {
     expect(s.plannedCount).toBe(2);
     expect(s.tasksDue.some((t) => t.title === "Buy seeds")).toBe(true);
     expect(s.tasksDue.every((t) => t.dueDate <= "2026-05-10")).toBe(true);
-  });
-});
-
-describe("completionActions", () => {
-  it("logs planting tasks", () => {
-    const task = { id: "water:p1", type: "water" as const, plantingId: "p1", title: "Water", detail: "", dueDate: "2026-05-01", overdueDays: 1 };
-    expect(completionActions("g1", task, "2026-05-02", "care-1")).toEqual([
-      { type: "care/log", gardenId: "g1", entry: { id: "care-1", plantingId: "p1", type: "water", date: "2026-05-02" } },
-    ]);
-  });
-
-  it("completes one-off reminders and reschedules repeating ones", () => {
-    const base = { type: "custom" as const, title: "T", detail: "", dueDate: "2026-05-01", overdueDays: 0, reminderId: "r1" };
-    expect(completionActions("g1", { ...base, id: "reminder:r1" }, "2026-05-01", "x")).toEqual([
-      { type: "reminder/update", gardenId: "g1", reminderId: "r1", changes: { done: true } },
-    ]);
-    expect(completionActions("g1", { ...base, id: "reminder:r1", repeatDays: 7 }, "2026-05-01", "x")).toEqual([
-      { type: "reminder/update", gardenId: "g1", reminderId: "r1", changes: { dueDate: "2026-05-08" } },
-    ]);
   });
 });

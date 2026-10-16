@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { Badge, Card, ReasonList } from "@/components/ui";
 import type { Plant, Recommendation } from "@/domain/types";
-import { ALLERGEN_LABELS, CATEGORY_LABELS, DIFFICULTY_LABELS, VERDICT_LABELS, WATER_LABELS } from "@/lib/labels";
+import { ALLERGEN_LABELS, CATEGORY_LABELS, DIFFICULTY_LABELS, shortLabel, VERDICT_LABELS, WATER_LABELS } from "@/lib/labels";
 import { useAppData } from "@/state/AppDataProvider";
 import { DIFFICULTY_TONES, sunSummary, topReasons, VERDICT_TONES } from "./plantCardModel";
 import { matchingAllergens, petSafetyBadge } from "./plantSafety";
@@ -54,7 +54,7 @@ export function PlantCard({ plant, recommendation, expandable = false, actions }
             {safety && <Badge tone={safety.tone}>{safety.label}</Badge>}
             {allergenHits.length > 0 && (
               <Badge tone="warning">
-                ⚠ Allergen: {allergenHits.map((a) => ALLERGEN_LABELS[a].replace(/\s*\(.*\)$/, "")).join(", ")}
+                ⚠ Allergen: {allergenHits.map((a) => shortLabel(ALLERGEN_LABELS[a])).join(", ")}
               </Badge>
             )}
           </div>

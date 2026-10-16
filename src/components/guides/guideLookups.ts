@@ -1,6 +1,7 @@
 /** Pure lookups behind the guides: reverse plant lookups, hash routing, grouping, searching. */
 import { relationBetween } from "@/domain/companions";
 import type { Insect, InsectId, Plant, ToolInfo } from "@/domain/types";
+import { TOOL_CATEGORY_LABELS } from "@/lib/labels";
 
 // --- reverse plant lookups ---------------------------------------------------
 
@@ -60,15 +61,6 @@ export function searchInsects(insects: readonly Insect[], query: string): Insect
 }
 
 // --- tools -------------------------------------------------------------------
-
-export const TOOL_CATEGORY_LABELS: Record<ToolInfo["category"], string> = {
-  "hand-tool": "Hand tools",
-  watering: "Watering",
-  structure: "Structures & supports",
-  indoor: "Indoor growing",
-  protection: "Protection",
-  soil: "Soil care",
-};
 
 export interface ToolGroup {
   category: ToolInfo["category"];

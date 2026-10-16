@@ -2,11 +2,10 @@
 
 import { Badge } from "@/components/ui";
 import { TOOLS } from "@/data/tools";
+import { COST_LABELS } from "@/lib/labels";
 import { useAppData } from "@/state/AppDataProvider";
 import { GuideCard, GuideList } from "./GuideCard";
 import { groupToolsByCategory } from "./guideLookups";
-
-const COST_LABELS = { $: "Budget", $$: "Mid-range", $$$: "Investment" } as const;
 
 export function ToolGuide() {
   const { activeGarden } = useAppData();

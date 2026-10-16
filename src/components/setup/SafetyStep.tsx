@@ -1,9 +1,8 @@
 "use client";
 
-import { ChipGroup } from "@/components/ui";
+import { Checkbox, ChipGroup } from "@/components/ui";
 import { ALLERGENS, PETS, type Allergen, type Pet } from "@/domain/types";
 import { ALLERGEN_LABELS, PET_EMOJI, PET_LABELS } from "@/lib/labels";
-import { Checkbox } from "./Checkbox";
 import type { StepProps } from "./step-props";
 
 const PET_OPTIONS = PETS.map((value) => ({ value, label: PET_LABELS[value], icon: PET_EMOJI[value] }));
@@ -33,7 +32,7 @@ export function SafetyStep({ state, dispatch }: StepProps) {
         label="Young children in the household"
         hint="Plants that are harmful if eaten get a warning."
         checked={state.hasChildren}
-        onChange={(hasChildren) => dispatch({ type: "patch", changes: { hasChildren } })}
+        onChange={(e) => dispatch({ type: "patch", changes: { hasChildren: e.target.checked } })}
       />
     </div>
   );

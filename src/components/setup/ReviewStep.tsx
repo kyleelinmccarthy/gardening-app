@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { Badge, Button } from "@/components/ui";
 import { TOOLS } from "@/data/tools";
 import { formatTemperature } from "@/domain/climate";
+import { formatMonthDay } from "@/domain/dates";
 import {
   ALLERGEN_LABELS,
   CATEGORY_LABELS,
@@ -17,7 +18,6 @@ import {
   SPACE_LABELS,
   SUN_LABELS,
 } from "@/lib/labels";
-import { formatMonthDay } from "./format";
 import type { StepProps } from "./step-props";
 
 export interface ReviewStepProps extends StepProps {
@@ -52,7 +52,7 @@ function Row({ term, children }: { term: string; children: ReactNode }) {
 
 export function ReviewStep({ state, unit, onEdit }: ReviewStepProps) {
   const indoor = state.setting === "indoor";
-  const t = (f: number) => formatTemperature(f, unit);
+  const t = (f: number | null) => (f === null ? "—" : formatTemperature(f, unit));
   const toolNames = state.tools.map((id) => TOOLS.find((x) => x.id === id)?.name ?? id);
 
   return (
