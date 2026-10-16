@@ -18,6 +18,7 @@ import {
   SPACE_LABELS,
   SUN_LABELS,
 } from "@/lib/labels";
+import { SETUP_STEPS, validateStep, type SetupStep } from "./setupForm";
 import type { StepProps } from "./step-props";
 
 export interface ReviewStepProps extends StepProps {
@@ -50,6 +51,32 @@ function Row({ term, children }: { term: string; children: ReactNode }) {
   );
 }
 
+/** Steps whose answers currently fail validation, each with its first problem. */
+function invalidSteps(state: StepProps["state"]): { step: SetupStep; index: number; message: string }[] {
+  return SETUP_STEPS.flatMap((step, index) => {
+    const [message] = Object.values(validateStep(step.id, state));
+    return message ? [{ step, index, message }] : [];
+  });
+}
+
+function IncompleteNotice({ problems, onEdit }: { problems: ReturnType<typeof invalidSteps>; onEdit: (i: number) => void }) {
+  if (problems.length === 0) return null;
+  return (
+    <div role="alert" className="rounded-lg bg-danger-soft p-3 text-sm text-danger">
+      <p className="font-medium">Fix these before saving:</p>
+      <ul className="mt-1 flex flex-col gap-1">
+        {problems.map(({ step, index, message }) => (
+          <li key={step.id}>
+            <Button size="sm" variant="ghost" onClick={() => onEdit(index)}>
+              {step.label}: {message}
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function ReviewStep({ state, unit, onEdit }: ReviewStepProps) {
   const indoor = state.setting === "indoor";
   const t = (f: number | null) => (f === null ? "—" : formatTemperature(f, unit));
@@ -57,6 +84,7 @@ export function ReviewStep({ state, unit, onEdit }: ReviewStepProps) {
 
   return (
     <div className="flex flex-col gap-3">
+      <IncompleteNotice problems={invalidSteps(state)} onEdit={onEdit} />
       <p className="text-sm text-muted">Check everything looks right. You can change any of this later from “Edit setup”.</p>
       <Section title="Basics" stepIndex={0} onEdit={onEdit}>
         <Row term="Name">{state.name.trim() || "—"}</Row>
@@ -91,7 +119,7 @@ export function ReviewStep({ state, unit, onEdit }: ReviewStepProps) {
         <Row term="Interests">{list(state.interests.map((c) => CATEGORY_LABELS[c]), "Everything")}</Row>
         <Row term="Goals">{list(state.goals.map((g) => GOAL_LABELS[g]), "None selected")}</Row>
         <Row term="Experience">{EXPERIENCE_LABELS[state.experience]}</Row>
-        <Row term="Time per week">{state.weeklyHours} h</Row>
+        <Row term="Time per week">{Number.isFinite(state.weeklyHours) ? `${state.weeklyHours} h` : "—"}</Row>
       </Section>
       <Section title="Household" stepIndex={5} onEdit={onEdit}>
         <Row term="Pets">{list(state.pets.map((p) => PET_LABELS[p]), "None")}</Row>

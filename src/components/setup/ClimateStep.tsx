@@ -94,7 +94,7 @@ export function ClimateStep({ state, errors, dispatch, unit, lookupZone = (zip) 
             {status.kind === "loading" ? "Looking up…" : "Look up zone"}
           </Button>
         </div>
-        <p className="-mt-2 text-xs text-muted">Looks up your zone via phzmapi.org. Nothing else leaves your browser.</p>
+        <p className="-mt-2 text-xs text-muted">Looks up your zone via phzmapi.org, which receives the ZIP code you enter.</p>
         {status.kind === "done" && (
           <p role={status.ok ? "status" : "alert"} className={status.ok ? "text-sm text-success" : "text-sm text-danger"}>
             {status.message}

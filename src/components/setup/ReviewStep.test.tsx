@@ -8,8 +8,8 @@ function setup(changes: Partial<SetupFormState> = {}, unit: "F" | "C" = "F") {
   const onEdit = vi.fn();
   const user = userEvent.setup();
   const state = { ...initialSetupState(), name: "Yard", ...changes };
-  render(<ReviewStep state={state} errors={{}} dispatch={() => {}} unit={unit} onEdit={onEdit} />);
-  return { user, onEdit };
+  const { unmount } = render(<ReviewStep state={state} errors={{}} dispatch={() => {}} unit={unit} onEdit={onEdit} />);
+  return { user, onEdit, unmount };
 }
 
 const row = (term: string) => screen.getByText(term, { selector: "dt" }).nextElementSibling as HTMLElement;

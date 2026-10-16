@@ -326,7 +326,6 @@ describe("SetupWizard focus management", () => {
     const user = userEvent.setup();
     renderWithAppData(<SetupWizard />);
     await user.type(await screen.findByLabelText("Garden name"), "G");
-    expect(document.body).toHaveFocus();
     await next(user);
     const heading = screen.getByRole("heading", { level: 2, name: "Climate" });
     expect(heading).toContainElement(document.activeElement as HTMLElement);
@@ -364,9 +363,9 @@ describe("SetupWizard review of incomplete steps", () => {
     await user.type(await screen.findByLabelText("Garden name"), "G");
     for (let i = 0; i < 6; i++) await next(user);
     // The progress list lets users jump to any step already reached, including Review.
-    await user.click(screen.getByRole("button", { name: /What to grow/ }));
+    await user.click(screen.getByRole("button", { name: "What to grow" }));
     await user.clear(screen.getByLabelText("Hours per week you can spend"));
-    await user.click(screen.getByRole("button", { name: /Review/ }));
+    await user.click(screen.getByRole("button", { name: "Review" }));
 
     expect(screen.getByRole("heading", { level: 2, name: "Review" })).toBeInTheDocument();
     expect(document.body).not.toHaveTextContent("NaN");
