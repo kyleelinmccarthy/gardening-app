@@ -34,6 +34,22 @@ function createDefaultRepository(): AppDataRepository {
   return createLocalRepository(getBrowserStorage() ?? createMemoryStorage());
 }
 
+/** Internal action: first load from storage; flips `hydrated` in the same update as the data. */
+const HYDRATE = "@@hydrate";
+type ProviderAction = AppAction | { type: typeof HYDRATE; data: AppData };
+interface ProviderState {
+  data: AppData;
+  hydrated: boolean;
+}
+
+const initialProviderState = (): ProviderState => ({ data: createEmptyAppData(), hydrated: false });
+
+function providerReducer(state: ProviderState, action: ProviderAction): ProviderState {
+  if (action.type === HYDRATE) return { data: action.data, hydrated: true };
+  const data = appReducer(state.data, action);
+  return data === state.data ? state : { ...state, data };
+}
+
 export function AppDataProvider({
   children,
   repository,
@@ -45,8 +61,7 @@ export function AppDataProvider({
   const [defaultRepository] = useState(() => (repository ? null : createDefaultRepository()));
   const repo = repository ?? defaultRepository!;
 
-  const [data, dispatch] = useReducer(appReducer, undefined, createEmptyAppData);
-  const [hydrated, setHydrated] = useState(false);
+  const [{ data, hydrated }, dispatch] = useReducer(providerReducer, undefined, initialProviderState);
   /** The last object known to match storage; avoids echoing loaded data back. */
   const persisted = useRef<AppData | null>(null);
 
@@ -54,8 +69,7 @@ export function AppDataProvider({
   useEffect(() => {
     const loaded = repo.load();
     persisted.current = loaded;
-    dispatch({ type: "data/replace", data: loaded });
-    setHydrated(true);
+    dispatch({ type: HYDRATE, data: loaded });
   }, [repo]);
 
   // Persist every change once hydrated.
