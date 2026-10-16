@@ -45,7 +45,7 @@ describe("Recommendations", () => {
     expect(screen.getByRole("heading", { level: 2, name: /Not recommended/ })).toBeInTheDocument();
     expect(names()).toContain("Pothos");
     const pothos = within(screen.getByRole("heading", { level: 3, name: /Pothos/ }).closest("section")!);
-    const blocker = pothos.getByText(/Not suited to outdoor growing/i).closest("li")!;
+    const blocker = pothos.getAllByText(/Not suited to outdoor growing/i)[0].closest("li")!; // shown in the top reasons
     expect(blocker).toHaveAttribute("data-kind", "blocker");
     expect(blocker).toHaveTextContent("⛔");
     expect(within(blocker).getByText("Blocker:")).toBeInTheDocument();
