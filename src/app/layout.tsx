@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { AppNav } from "@/components/AppNav";
+import { StorageNotice } from "@/components/StorageNotice";
 import { AppDataProvider } from "@/state/AppDataProvider";
 import "./globals.css";
 
@@ -38,6 +39,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               <AppNav />
             </div>
           </header>
+          <StorageNotice />
           <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:py-8">
             {children}
           </main>

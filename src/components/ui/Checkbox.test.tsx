@@ -18,10 +18,10 @@ describe("Checkbox", () => {
   });
 
   it("supports controlled use", async () => {
-    const onChange = vi.fn();
-    render(<Checkbox label="On" checked={false} onChange={onChange} />);
+    const seen: boolean[] = [];
+    render(<Checkbox label="On" checked={false} onChange={(e) => seen.push(e.target.checked)} />);
     await userEvent.click(screen.getByRole("checkbox"));
-    expect(onChange.mock.calls[0][0].target.checked).toBe(true);
+    expect(seen).toEqual([true]);
     expect(screen.getByRole("checkbox")).not.toBeChecked();
   });
 
