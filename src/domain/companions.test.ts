@@ -136,14 +136,12 @@ describe("analyzeBed", () => {
 
 describe("suggestCompanions", () => {
   it("lists companions in either direction and excludes antagonists and the plant itself", () => {
-    const names = suggestCompanions(tomato, catalog).map((p) => p.id);
-    expect(names.sort()).toEqual(["basil", "carrot", "marigold"]);
+    const ids = suggestCompanions(tomato, catalog).map((p) => p.id);
+    expect([...ids].sort()).toEqual(["basil", "carrot", "marigold"]);
   });
 
-  it("puts mutual companions first", () => {
-    const ids = suggestCompanions(tomato, catalog).map((p) => p.id);
-    expect(ids.slice(0, 2).sort()).toEqual(["basil", "marigold"].filter((id) => id === "basil" || id === "marigold"));
-    expect(ids[2]).toBe("carrot");
+  it("puts mutual companions first, then sorts by name", () => {
+    expect(suggestCompanions(tomato, catalog).map((p) => p.id)).toEqual(["basil", "carrot", "marigold"]);
   });
 
   it("excludes plants that are both companion and antagonist", () => {
