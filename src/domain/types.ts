@@ -310,7 +310,7 @@ export interface PlantingWindows {
   startIndoorsWeeks?: number; // e.g. -8 => start seeds 8 weeks before last frost
   transplantWeeks?: number; // e.g. 2 => transplant 2 weeks after last frost
   directSowWeeks?: number; // e.g. -4 => direct sow 4 weeks before last frost
-  fallSowWeeksBeforeFirstFrost?: number; // e.g. 10 => sow 10 weeks before first frost
+  fallSowWeeksBeforeFirstFrost?: number; // e.g. 10 => sow 10 weeks before first frost; negative => after it (bulbs)
   /** Free-text guidance for perennials / houseplants (e.g. "Plant bare-root in early spring"). */
   notes?: string;
 }

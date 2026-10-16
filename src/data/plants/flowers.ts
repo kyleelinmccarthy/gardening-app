@@ -1244,7 +1244,7 @@ export const FLOWERS: Plant[] = [
     spacingInches: 5,
     heightInches: { min: 6, max: 28 },
     planting: {
-      fallSowWeeksBeforeFirstFrost: 2,
+      fallSowWeeksBeforeFirstFrost: -2, // negative = after first frost (soil below 60°F)
       notes:
         "Plant bulbs in fall, pointed end up, 6–8 in deep (about 3 times the bulb height), when soil temperature is below 60°F and about 4–6 weeks before the ground freezes. That is usually October to November in zones 3–7 and December in zones 8 and warmer (where pre-chilled bulbs in the refrigerator for 8–12 weeks are treated as annuals). Set bulbs where soil drains well; foliage must die back naturally for the bulb to recharge.",
     },
@@ -1325,7 +1325,7 @@ export const FLOWERS: Plant[] = [
     spacingInches: 6,
     heightInches: { min: 6, max: 24 },
     planting: {
-      fallSowWeeksBeforeFirstFrost: 4,
+      fallSowWeeksBeforeFirstFrost: 2,
       notes:
         "Plant bulbs in fall, pointed side up, 6 in deep (three times the bulb's height) about 6 weeks before the ground freezes, usually September to November. Early planting helps roots develop; daffodils tolerate earlier planting than tulips. Leave foliage until it yellows (6+ weeks after bloom). Divide crowded clumps in early summer when foliage dies back.",
     },
