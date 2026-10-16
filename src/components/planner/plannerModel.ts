@@ -1,0 +1,218 @@
+/**
+ * Pure helpers for the bed planner: palette grouping, labels, warnings and
+ * bed-form parsing. No React; companion/density rules stay in `@/domain`.
+ */
+import { plantsPerCell } from "@/domain/companions";
+import type { NewBedInput } from "@/domain/defaults";
+import type { Bed, BedKind, CompanionPair, GardenSetting, Plant, PlantCatalog, SunExposure } from "@/domain/types";
+import { SUN_LABELS } from "@/lib/labels";
+
+// --- palette ---------------------------------------------------------------
+
+export type PaletteSectionId = "garden" | "recommended" | "all";
+
+export interface PaletteSection {
+  id: PaletteSectionId;
+  title: string;
+  plants: Plant[];
+}
+
+export interface PaletteInput {
+  allPlants: readonly Plant[];
+  /** Plant ids from the garden's plantings (unknown ids are ignored). */
+  gardenPlantIds: readonly string[];
+  recommended: readonly Plant[];
+  query: string;
+}
+
+/**
+ * Splits plants into "In your garden", "Recommended for you" and "All plants".
+ * Each plant appears once (in the first section that claims it); a search
+ * query narrows every section and empty sections are dropped.
+ */
+export function buildPalette({ allPlants, gardenPlantIds, recommended, query }: PaletteInput): PaletteSection[] {
+  const q = query.trim().toLowerCase();
+  const matches = (p: Plant) =>
+    q === "" || p.name.toLowerCase().includes(q) || p.scientificName.toLowerCase().includes(q);
+  const byId = new Map(allPlants.map((p) => [p.id, p]));
+  const used = new Set<string>();
+  const take = (plants: readonly (Plant | undefined)[]): Plant[] => {
+    const taken: Plant[] = [];
+    for (const p of plants) {
+      if (!p || used.has(p.id) || !matches(p)) continue;
+      used.add(p.id);
+      taken.push(p);
+    }
+    return taken;
+  };
+
+  const sections: PaletteSection[] = [
+    { id: "garden", title: "In your garden", plants: take(gardenPlantIds.map((id) => byId.get(id))) },
+    { id: "recommended", title: "Recommended for you", plants: take(recommended) },
+    { id: "all", title: "All plants", plants: take(allPlants) },
+  ];
+  return sections.filter((s) => s.plants.length > 0);
+}
+
+// --- labels ----------------------------------------------------------------
+
+/** Accessible name for a grid cell; coordinates are 0-based in, 1-based out. */
+export function cellLabel(x: number, y: number, plant?: Pick<Plant, "name">): string {
+  return `Row ${y + 1}, column ${x + 1}: ${plant ? plant.name : "empty"}`;
+}
+
+/** Name trimmed to `max` characters (with an ellipsis) for tight grid cells. */
+export function shortName(name: string, max = 9): string {
+  return name.length <= max ? name : `${name.slice(0, max - 1)}…`;
+}
+
+// --- warnings & hints ------------------------------------------------------
+
+export function sunMismatch(bed: Pick<Bed, "sun">, plant: Pick<Plant, "sun">): boolean {
+  return !plant.sun.includes(bed.sun);
+}
+
+export function sunWarning(bed: Pick<Bed, "sun">, plant: Pick<Plant, "name" | "sun">): string | null {
+  if (!sunMismatch(bed, plant)) return null;
+  const wanted = plant.sun.map((s) => SUN_LABELS[s].toLowerCase()).join(" or ");
+  return `${plant.name} prefers ${wanted}, but this bed has ${SUN_LABELS[bed.sun].toLowerCase()}.`;
+}
+
+/** The id of the other plant in a pair. */
+const otherId = (pair: CompanionPair, plantId: string) => (pair.a === plantId ? pair.b : pair.a);
+
+/** "Fennel conflicts with Tomato next to it", or null when nothing conflicts. */
+export function conflictWarning(
+  conflicts: readonly CompanionPair[],
+  plant: Pick<Plant, "id" | "name">,
+  catalog: PlantCatalog,
+): string | null {
+  if (conflicts.length === 0) return null;
+  const names = conflicts.map((c) => catalog.get(otherId(c, plant.id))?.name ?? otherId(c, plant.id));
+  return `${plant.name} conflicts with ${names.join(", ")} next to it`;
+}
+
+/** "4 per square" or "needs 2×2 squares". */
+export function densityHint(plant: Plant, cellSizeInches: number): string {
+  const { perCell, cellsNeeded } = plantsPerCell(plant, cellSizeInches);
+  if (cellsNeeded > 1) {
+    const span = Math.round(Math.sqrt(cellsNeeded));
+    return `needs ${span}×${span} squares`;
+  }
+  return `${perCell} per square`;
+}
+
+// --- analysis --------------------------------------------------------------
+
+export interface PairDescription {
+  key: string;
+  names: [string, string];
+  note?: string;
+}
+
+/** Display names plus the first companion note either plant declares. */
+export function describePair(pair: CompanionPair, catalog: PlantCatalog): PairDescription {
+  const a = catalog.get(pair.a);
+  const b = catalog.get(pair.b);
+  return {
+    key: `${pair.a}|${pair.b}`,
+    names: [a?.name ?? pair.a, b?.name ?? pair.b],
+    note: a?.companionNotes || b?.companionNotes || undefined,
+  };
+}
+
+export interface PlacementSummary {
+  plant: Plant;
+  count: number;
+}
+
+/** Cells per plant in a bed, most numerous first (unknown plants skipped). */
+export function summarizePlacements(bed: Bed, catalog: PlantCatalog): PlacementSummary[] {
+  const counts = new Map<string, number>();
+  for (const p of bed.placements) counts.set(p.plantId, (counts.get(p.plantId) ?? 0) + 1);
+  const summary: PlacementSummary[] = [];
+  for (const [id, count] of counts) {
+    const plant = catalog.get(id);
+    if (plant) summary.push({ plant, count });
+  }
+  return summary.sort((x, y) => y.count - x.count || x.plant.name.localeCompare(y.plant.name));
+}
+
+// --- bed form --------------------------------------------------------------
+
+export const MIN_BED_DIMENSION = 1;
+export const MAX_BED_DIMENSION = 20;
+export const MAX_CELL_SIZE_INCHES = 120;
+
+export interface BedFormValues {
+  name: string;
+  kind: BedKind;
+  columns: string;
+  rows: string;
+  cellSizeInches: string;
+  sun: SunExposure;
+}
+
+export type BedFormField = "name" | "columns" | "rows" | "cellSizeInches";
+export type BedFormErrors = Partial<Record<BedFormField, string>>;
+export type BedFormResult = { ok: true; value: NewBedInput } | { ok: false; errors: BedFormErrors };
+
+export function defaultBedValues(setting: GardenSetting, sun: SunExposure): BedFormValues {
+  const indoor = setting === "indoor";
+  return {
+    name: "",
+    kind: indoor ? "windowsill" : "raised-bed",
+    columns: indoor ? "3" : "4",
+    rows: indoor ? "2" : "4",
+    cellSizeInches: "12",
+    sun,
+  };
+}
+
+export function bedToFormValues(bed: Bed): BedFormValues {
+  return {
+    name: bed.name,
+    kind: bed.kind,
+    columns: String(bed.columns),
+    rows: String(bed.rows),
+    cellSizeInches: String(bed.cellSizeInches),
+    sun: bed.sun,
+  };
+}
+
+function parseDimension(raw: string, label: string): { value?: number; error?: string } {
+  const n = Number(raw);
+  if (raw.trim() === "" || !Number.isInteger(n) || n < MIN_BED_DIMENSION || n > MAX_BED_DIMENSION) {
+    return { error: `${label} must be a whole number from ${MIN_BED_DIMENSION} to ${MAX_BED_DIMENSION}.` };
+  }
+  return { value: n };
+}
+
+export function parseBedForm(values: BedFormValues): BedFormResult {
+  const errors: BedFormErrors = {};
+  const name = values.name.trim();
+  if (!name) errors.name = "Give the bed a name.";
+
+  const columns = parseDimension(values.columns, "Columns");
+  if (columns.error) errors.columns = columns.error;
+  const rows = parseDimension(values.rows, "Rows");
+  if (rows.error) errors.rows = rows.error;
+
+  const cell = Number(values.cellSizeInches);
+  if (values.cellSizeInches.trim() === "" || !(cell > 0) || cell > MAX_CELL_SIZE_INCHES) {
+    errors.cellSizeInches = `Cell size must be between 1 and ${MAX_CELL_SIZE_INCHES} inches.`;
+  }
+
+  if (Object.keys(errors).length > 0) return { ok: false, errors };
+  return {
+    ok: true,
+    value: {
+      name,
+      kind: values.kind,
+      columns: columns.value!,
+      rows: rows.value!,
+      cellSizeInches: cell,
+      sun: values.sun,
+    },
+  };
+}
