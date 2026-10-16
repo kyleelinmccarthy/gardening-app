@@ -68,4 +68,17 @@ describe("AppNav", () => {
     await user.keyboard("{Escape}");
     expect(summary.closest("details")).not.toHaveAttribute("open");
   });
+  it("closes the mobile menu when a link is chosen, even for the current page", async () => {
+    usePathname.mockReturnValue("/plants");
+    const user = userEvent.setup();
+    render(<AppNav />);
+    const summary = screen.getByText("Menu").closest("summary")!;
+    const details = summary.closest("details")!;
+    await user.click(summary);
+    const mobileNav = screen.getByRole("navigation", { name: "Main (mobile)" });
+    const link = mobileNav.querySelector('a[href="/plants"]') as HTMLAnchorElement;
+    link.addEventListener("click", (e) => e.preventDefault());
+    await user.click(link);
+    expect(details).not.toHaveAttribute("open");
+  });
 });
