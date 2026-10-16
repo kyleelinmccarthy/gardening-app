@@ -4,9 +4,10 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { Badge, Card, ReasonList } from "@/components/ui";
 import type { Plant, Recommendation } from "@/domain/types";
-import { ALLERGEN_LABELS, CATEGORY_LABELS, DIFFICULTY_LABELS, shortLabel, VERDICT_LABELS, WATER_LABELS } from "@/lib/labels";
+import { ALLERGEN_LABELS, shortLabel, VERDICT_LABELS, WATER_LABELS } from "@/lib/labels";
 import { useAppData } from "@/state/AppDataProvider";
-import { DIFFICULTY_TONES, sunSummary, topReasons, VERDICT_TONES } from "./plantCardModel";
+import { topReasons, VERDICT_TONES } from "./plantCardModel";
+import { PlantBadges } from "./PlantBadges";
 import { matchingAllergens, petSafetyBadge } from "./plantSafety";
 
 export interface PlantCardProps {
@@ -39,15 +40,9 @@ export function PlantCard({ plant, recommendation, expandable = false, actions }
       description={<span className="italic">{plant.scientificName}</span>}
     >
       <div className="flex flex-1 flex-col gap-3">
-        <div className="flex flex-wrap gap-1.5">
-          <Badge>{CATEGORY_LABELS[plant.category]}</Badge>
-          {plant.custom && <Badge tone="info">Custom</Badge>}
-          <Badge>☀️ {sunSummary(plant.sun)}</Badge>
+        <PlantBadges plant={plant}>
           <Badge>💧 {WATER_LABELS[plant.water]}</Badge>
-          <Badge tone={DIFFICULTY_TONES[plant.difficulty]}>{DIFFICULTY_LABELS[plant.difficulty]}</Badge>
-          {plant.container.suitable && <Badge>🪴 Container-friendly</Badge>}
-          {plant.environments.includes("indoor") && <Badge>🏠 Indoor-capable</Badge>}
-        </div>
+        </PlantBadges>
 
         {(safety || allergenHits.length > 0) && (
           <div className="flex flex-wrap gap-1.5">

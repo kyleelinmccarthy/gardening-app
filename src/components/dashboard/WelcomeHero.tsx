@@ -28,7 +28,7 @@ export function WelcomeHero() {
             Browse the plant library
           </ButtonLink>
         </div>
-        <p className="mt-3 text-xs text-muted">Takes about two minutes. Everything stays in your browser.</p>
+        <p className="mt-3 text-xs text-muted">Takes about two minutes. Your gardens are saved in this browser — the only outside request is an optional ZIP-code zone lookup.</p>
       </section>
 
       <section aria-label="What you can do">

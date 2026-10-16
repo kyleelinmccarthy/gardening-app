@@ -49,6 +49,33 @@ describe("CustomPlantForm", () => {
     expect(screen.queryByText(/Please fix/)).not.toBeInTheDocument();
   });
 
+  it("moves focus to the error summary when saving fails", async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole("button", { name: "Add plant" }));
+    const summary = screen.getByText(/Please fix 1 problem/);
+    expect(summary).toHaveFocus();
+    expect(summary).toHaveAttribute("tabindex", "-1");
+  });
+
+  it("refocuses the error summary on every failed attempt", async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole("button", { name: "Add plant" }));
+    await user.click(screen.getByLabelText("Scientific name"));
+    await user.click(screen.getByRole("button", { name: "Add plant" }));
+    expect(screen.getByText(/Please fix 1 problem/)).toHaveFocus();
+  });
+
+  it("allows negative fall-sow weeks (after first frost) and explains them", async () => {
+    const { user, onSave } = setup();
+    await user.type(screen.getByLabelText("Name"), "Tulip");
+    const fallSow = screen.getByLabelText("Fall sow (weeks before first frost)");
+    expect(fallSow).not.toHaveAttribute("min");
+    expect(fallSow).toHaveAccessibleDescription(/Negative = weeks after first frost/);
+    await user.type(fallSow, "-2");
+    await user.click(screen.getByRole("button", { name: "Add plant" }));
+    expect(onSave.mock.calls[0][0].planting.fallSowWeeksBeforeFirstFrost).toBe(-2);
+  });
+
   it("creates a plant with a generated custom id from the entered values", async () => {
     const { user, onSave } = setup();
     await user.type(screen.getByLabelText("Name"), "Purple Basil");

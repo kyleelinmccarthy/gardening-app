@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import { Button, Card, Checkbox, ChipGroup, EmptyState, Field, LoadingState, Select, TextInput } from "@/components/ui";
 import { filterPlants } from "@/domain/filters";
 import { evaluatePlant } from "@/domain/recommendation";
@@ -51,14 +51,22 @@ export function PlantLibrary() {
   const set = <K extends keyof LibraryState>(key: K, value: LibraryState[K]) =>
     setState((s) => ({ ...s, [key]: value }));
 
-  const results = useMemo(() => {
-    const matches = filterPlants(catalog.all(), toPlantFilters(state, profile));
-    const scores = new Map<string, number>();
-    if (state.sort === "match" && profile) {
-      for (const p of matches) scores.set(p.id, evaluatePlant(p, profile).score);
-    }
-    return sortPlants(matches, state.sort, (p) => scores.get(p.id) ?? 0);
-  }, [catalog, state, profile]);
+  // Typing stays responsive: the (cheap) filtering follows the query one render behind.
+  const deferredQuery = useDeferredValue(state.query);
+  const filtered = useMemo(
+    () => filterPlants(catalog.all(), toPlantFilters({ ...state, query: deferredQuery }, profile)),
+    [catalog, state, deferredQuery, profile],
+  );
+  // Scoring is the expensive part; it depends only on the catalog and garden, never on the filters.
+  const wantsScores = state.sort === "match" && profile !== null;
+  const scores = useMemo(
+    () => (wantsScores ? new Map(catalog.all().map((p) => [p.id, evaluatePlant(p, profile).score])) : null),
+    [catalog, profile, wantsScores],
+  );
+  const results = useMemo(
+    () => sortPlants(filtered, state.sort, (p) => scores?.get(p.id) ?? 0),
+    [filtered, state.sort, scores],
+  );
 
   if (!hydrated) return <LoadingState />;
 
@@ -153,6 +161,7 @@ export function PlantLibrary() {
         </div>
       </Card>
 
+      <h2 className="sr-only">Plants</h2>
       <p aria-live="polite" className="text-sm text-muted">
         {results.length} {results.length === 1 ? "plant" : "plants"}
       </p>

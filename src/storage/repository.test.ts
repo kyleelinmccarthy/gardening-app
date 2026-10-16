@@ -1,7 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { makeAppData, makeBed, makeGarden } from "@/test/fixtures";
 import { createEmptyAppData } from "./schema";
-import { createLocalRepository, createUnavailableRepository, exportAppData, importAppData } from "./repository";
+import {
+  MAX_IMPORT_CHARS,
+  createLocalRepository,
+  createUnavailableRepository,
+  exportAppData,
+  importAppData,
+} from "./repository";
 import { createMemoryStorage, type KeyValueStorage } from "./storage";
 
 const KEY = "garden-planner:v1";
@@ -230,5 +236,20 @@ describe("exportAppData / importAppData", () => {
 
   it("rejects empty input", () => {
     expect(importAppData("").ok).toBe(false);
+  });
+
+  it("rejects oversized input before parsing it", () => {
+    const spy = vi.spyOn(JSON, "parse");
+    const r = importAppData(" ".repeat(MAX_IMPORT_CHARS + 1));
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/too large/i);
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it("accepts input exactly at the limit", () => {
+    const json = exportAppData(createEmptyAppData());
+    const r = importAppData(json + " ".repeat(MAX_IMPORT_CHARS - json.length));
+    expect(r.ok).toBe(true);
   });
 });

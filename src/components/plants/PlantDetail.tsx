@@ -4,10 +4,11 @@ import Link from "next/link";
 import { Badge, ButtonLink, Card, EmptyState, LoadingState, ReasonList } from "@/components/ui";
 import { todayIso } from "@/domain/dates";
 import { evaluatePlant } from "@/domain/recommendation";
-import { CATEGORY_LABELS, DIFFICULTY_LABELS, LIFE_CYCLE_LABELS, VERDICT_LABELS } from "@/lib/labels";
+import { LIFE_CYCLE_LABELS, VERDICT_LABELS } from "@/lib/labels";
 import { useAppData } from "@/state/AppDataProvider";
 import { AddToGardenButton } from "./AddToGardenButton";
-import { DIFFICULTY_TONES, sunSummary, VERDICT_TONES } from "./plantCardModel";
+import { PlantBadges } from "./PlantBadges";
+import { VERDICT_TONES } from "./plantCardModel";
 import {
   CompanionsSection,
   ConditionsSection,
@@ -18,7 +19,7 @@ import {
   TipsSection,
   ToolsSection,
   WildlifeSection,
-} from "./PlantDetailSections";
+} from "./detail";
 import { petSafetyBadge } from "./plantSafety";
 
 /** Full plant profile. Looks the plant up client-side so custom plants (stored in the browser) work too. */
@@ -31,6 +32,7 @@ export function PlantDetail({ id }: { id: string }) {
     return (
       <EmptyState
         icon="🥀"
+        headingLevel="h1"
         title="Plant not found"
         description="We could not find that plant. It may have been a custom plant that was deleted."
         action={<ButtonLink href="/plants">Back to the plant library</ButtonLink>}
@@ -57,17 +59,11 @@ export function PlantDetail({ id }: { id: string }) {
           </h1>
           <p className="italic text-muted">{plant.scientificName}</p>
           <p className="mt-3 text-foreground">{plant.description}</p>
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            <Badge>{CATEGORY_LABELS[plant.category]}</Badge>
-            {plant.custom && <Badge tone="info">Custom</Badge>}
+          <PlantBadges plant={plant} className="mt-3">
             <Badge>{LIFE_CYCLE_LABELS[plant.lifeCycle]}</Badge>
-            <Badge tone={DIFFICULTY_TONES[plant.difficulty]}>{DIFFICULTY_LABELS[plant.difficulty]}</Badge>
-            <Badge>☀️ {sunSummary(plant.sun)}</Badge>
             {plant.edible && <Badge tone="success">🍽️ Edible</Badge>}
-            {plant.container.suitable && <Badge>🪴 Container-friendly</Badge>}
-            {plant.environments.includes("indoor") && <Badge>🏠 Indoor-capable</Badge>}
             {safety && <Badge tone={safety.tone}>{safety.label}</Badge>}
-          </div>
+          </PlantBadges>
           {plant.custom && (
             <p className="mt-2 text-sm">
               <Link href="/settings" className="text-primary hover:underline">

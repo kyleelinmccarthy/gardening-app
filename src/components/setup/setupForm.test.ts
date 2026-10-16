@@ -6,6 +6,7 @@ import {
   SETUP_STEPS,
   firstInvalidStep,
   initialSetupState,
+  isSetupDirty,
   isValidMonthDay,
   setupReducer,
   stateFromProfile,
@@ -163,5 +164,20 @@ describe("firstInvalidStep", () => {
 
   it("steps end with review", () => {
     expect(SETUP_STEPS.at(-1)?.id).toBe("review");
+  });
+});
+
+describe("isSetupDirty", () => {
+  it("is false for identical state and true once anything changes", () => {
+    const initial = initialSetupState();
+    expect(isSetupDirty(initial, initialSetupState())).toBe(false);
+    expect(isSetupDirty(initial, { ...initial, name: "x" })).toBe(true);
+    expect(isSetupDirty(initial, { ...initial, pets: ["cat"] })).toBe(true);
+  });
+
+  it("treats a reverted edit as clean", () => {
+    const initial = initialSetupState();
+    const edited = setupReducer(initial, { type: "patch", changes: { name: "x" } });
+    expect(isSetupDirty(initial, setupReducer(edited, { type: "patch", changes: { name: "" } }))).toBe(false);
   });
 });

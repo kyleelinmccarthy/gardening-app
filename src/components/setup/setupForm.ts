@@ -158,6 +158,12 @@ export function toProfile(state: SetupFormState): GardenProfile {
   };
 }
 
+/** True when the user has changed anything since `initial` (used to guard against discarding input). */
+export function isSetupDirty(initial: SetupFormState, current: SetupFormState): boolean {
+  // JSON comparison is enough: the state is plain data (NaN serialises as null, which only ever matches NaN here).
+  return JSON.stringify(initial) !== JSON.stringify(current);
+}
+
 // --- reducer ---------------------------------------------------------------
 
 export function setupReducer(state: SetupFormState, action: SetupAction): SetupFormState {

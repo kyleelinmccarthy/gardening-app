@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import { PlantLink } from "@/components/plants/PlantLink";
 import { Badge, Field, TextInput } from "@/components/ui";
 import { INSECTS } from "@/data/insects";
@@ -8,14 +8,7 @@ import type { Insect, Plant } from "@/domain/types";
 import { INSECT_ROLE_LABELS } from "@/lib/labels";
 import { useAppData } from "@/state/AppDataProvider";
 import { GuideCard, GuideList } from "./GuideCard";
-import {
-  insectsInGroup,
-  plantsAffectedBy,
-  plantsAttracting,
-  plantsRepelling,
-  searchInsects,
-  type InsectGroup,
-} from "./guideLookups";
+import { indexPlantsByInsect, insectsInGroup, searchInsects, type InsectGroup, type InsectPlants } from "./guideLookups";
 
 const ROLE_TONES: Record<Insect["role"], "danger" | "warning" | "success" | "info"> = {
   pest: "danger",
@@ -40,6 +33,8 @@ function PlantLinks({ title, plants }: { title: string; plants: Plant[] }) {
   );
 }
 
+const NO_PLANTS: InsectPlants = { affected: [], repelling: [], attracting: [] };
+
 const COPY: Record<InsectGroup, { search: string; signs: string; manage: string }> = {
   pests: { search: "Search pests & wildlife", signs: "Signs to look for", manage: "How to manage it" },
   beneficials: { search: "Search beneficials & pollinators", signs: "How to recognise it", manage: "How to attract it" },
@@ -50,8 +45,10 @@ export function InsectGuide({ group }: { group: InsectGroup }) {
   const { catalog } = useAppData();
   const [query, setQuery] = useState("");
   const copy = COPY[group];
-  const plants = catalog.all();
-  const insects = useMemo(() => searchInsects(insectsInGroup(INSECTS, group), query), [group, query]);
+  const deferredQuery = useDeferredValue(query);
+  const plantsByInsect = useMemo(() => indexPlantsByInsect(catalog.all()), [catalog]);
+  const groupInsects = useMemo(() => insectsInGroup(INSECTS, group), [group]);
+  const insects = useMemo(() => searchInsects(groupInsects, deferredQuery), [groupInsects, deferredQuery]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -59,11 +56,11 @@ export function InsectGuide({ group }: { group: InsectGroup }) {
         <TextInput type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Name or symptom…" />
       </Field>
       {insects.length === 0 ? (
-        <p className="text-sm text-muted">Nothing matches &ldquo;{query}&rdquo;.</p>
+        <p className="text-sm text-muted">Nothing matches &ldquo;{deferredQuery}&rdquo;.</p>
       ) : (
         <div className="grid items-start gap-4 lg:grid-cols-2">
           {insects.map((insect) => {
-            const isPest = group === "pests";
+            const related = plantsByInsect.get(insect.id) ?? NO_PLANTS;
             return (
               <GuideCard
                 key={insect.id}
@@ -84,13 +81,13 @@ export function InsectGuide({ group }: { group: InsectGroup }) {
                     {insect.safetyNotes}
                   </p>
                 )}
-                {isPest ? (
+                {group === "pests" ? (
                   <>
-                    <PlantLinks title="Plants affected" plants={plantsAffectedBy(insect.id, plants)} />
-                    <PlantLinks title="Plants that help deter it" plants={plantsRepelling(insect.id, plants)} />
+                    <PlantLinks title="Plants affected" plants={related.affected} />
+                    <PlantLinks title="Plants that help deter it" plants={related.repelling} />
                   </>
                 ) : (
-                  <PlantLinks title="Plants that attract them" plants={plantsAttracting(insect.id, plants)} />
+                  <PlantLinks title="Plants that attract them" plants={related.attracting} />
                 )}
               </GuideCard>
             );

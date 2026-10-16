@@ -48,6 +48,13 @@ describe("Dashboard without a garden", () => {
     }
   });
 
+  it("does not claim everything stays in the browser, and discloses the ZIP lookup", async () => {
+    renderWithAppData(<Dashboard />);
+    await screen.findByRole("heading", { level: 1, name: /welcome/i });
+    expect(screen.queryByText(/everything stays in your browser/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/saved in this browser/i)).toHaveTextContent(/only outside request is an optional ZIP-code zone lookup/i);
+  });
+
   it("lets users open an existing garden when none is active", async () => {
     const user = userEvent.setup();
     const data = makeAppData([makeGarden({ id: "a", name: "Alpha" })], { activeGardenId: null });

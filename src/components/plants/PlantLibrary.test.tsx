@@ -12,6 +12,14 @@ vi.mock("@/data/plants", async () => {
 
 const cards = () => screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent?.replace(/^\S+\s/, ""));
 
+/** Heading levels in document order, assuming the page supplies an h1 above the component. */
+const headingLevels = () => screen.getAllByRole("heading").map((h) => Number(h.tagName[1]));
+const expectNoSkippedLevels = (levels: number[]) =>
+  levels.reduce((previous, level) => {
+    expect(level).toBeLessThanOrEqual(previous + 1);
+    return level;
+  }, 1);
+
 describe("PlantLibrary", () => {
   it("shows every plant with a count", async () => {
     renderWithAppData(<PlantLibrary />);
@@ -60,6 +68,29 @@ describe("PlantLibrary", () => {
   it("disables the personal toggles when there is no garden", async () => {
     renderWithAppData(<PlantLibrary />);
     expect(await screen.findByRole("checkbox", { name: /safe for my pets/i })).toBeDisabled();
+    expect(screen.getByRole("checkbox", { name: /exclude my allergens/i })).toBeDisabled();
+  });
+
+  it("explains via the description, not the label, why the personal toggles are disabled without a garden", async () => {
+    renderWithAppData(<PlantLibrary />);
+    for (const name of [/safe for my pets/i, /exclude my allergens/i]) {
+      const checkbox = await screen.findByRole("checkbox", { name });
+      expect(checkbox).toBeDisabled();
+      expect(checkbox).toHaveAccessibleDescription("Set up a garden to use this");
+      expect(checkbox).toHaveAccessibleName(/^(Safe for my pets|Exclude my allergens)$/);
+    }
+  });
+
+  it("enables the personal toggles with a garden and says when the profile has nothing to filter on", async () => {
+    renderWithAppData(<PlantLibrary />, { data: makeAppData([makeGarden()]) });
+    const pets = await screen.findByRole("checkbox", { name: /safe for my pets/i });
+    expect(pets).toBeEnabled();
+    expect(pets).toHaveAccessibleDescription("Your garden has no pets");
+    const allergens = screen.getByRole("checkbox", { name: /exclude my allergens/i });
+    expect(allergens).toBeEnabled();
+    expect(allergens).toHaveAccessibleDescription("No allergies in your profile");
+    await userEvent.click(pets);
+    expect(cards()).toHaveLength(4); // nothing to filter on without pets
   });
 
   it("offers sorting by best match only with a garden", async () => {
@@ -72,5 +103,12 @@ describe("PlantLibrary", () => {
     expect(within(select).getByRole("option", { name: /best match/i })).toBeInTheDocument();
     await userEvent.selectOptions(select, "match");
     expect(cards()).toHaveLength(4);
+  });
+
+  it("titles the result list so cards are not nested under the filter card's heading", async () => {
+    renderWithAppData(<PlantLibrary />);
+    const results = await screen.findByRole("heading", { level: 2, name: "Plants" });
+    expect(results).toHaveClass("sr-only");
+    expectNoSkippedLevels(headingLevels());
   });
 });

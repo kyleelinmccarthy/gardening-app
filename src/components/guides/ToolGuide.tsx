@@ -22,6 +22,7 @@ export function ToolGuide() {
               <GuideCard
                 key={tool.id}
                 id={`tool-${tool.id}`}
+                headingLevel="h4"
                 title={
                   <>
                     <span aria-hidden="true">{tool.emoji}</span> {tool.name}
@@ -37,7 +38,7 @@ export function ToolGuide() {
                 }
               >
                 <p>{tool.description}</p>
-                <GuideList title="Cheap alternatives" items={tool.alternatives} />
+                <GuideList title="Cheap alternatives" items={tool.alternatives} headingLevel="h5" />
               </GuideCard>
             ))}
           </div>

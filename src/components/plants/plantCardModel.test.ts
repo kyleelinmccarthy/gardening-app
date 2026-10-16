@@ -1,5 +1,6 @@
 import type { Reason } from "@/domain/types";
-import { sunSummary, topReasons } from "./plantCardModel";
+import { makePlant } from "@/test/fixtures";
+import { plantBadges, sunSummary, topReasons } from "./plantCardModel";
 
 const r = (kind: Reason["kind"], message: string): Reason => ({ kind, topic: "sun", message });
 
@@ -18,5 +19,22 @@ describe("topReasons", () => {
 describe("sunSummary", () => {
   it("drops the hour hints", () => {
     expect(sunSummary(["full-sun", "partial-sun"])).toBe("Full sun / Partial sun");
+  });
+});
+
+describe("plantBadges", () => {
+  it("lists the shared facts in display order", () => {
+    const plant = makePlant({ category: "herb", sun: ["full-sun"], difficulty: "easy", environments: ["outdoor"], container: { suitable: false } });
+    expect(plantBadges(plant)).toEqual([
+      { key: "category", label: "Herbs" },
+      { key: "sun", label: "☀️ Full sun" },
+      { key: "difficulty", label: "Easy", tone: "success" },
+    ]);
+  });
+
+  it("adds custom, container-friendly and indoor-capable badges when they apply", () => {
+    const plant = makePlant({ custom: true, environments: ["indoor", "outdoor"], container: { suitable: true } });
+    expect(plantBadges(plant).map((b) => b.key)).toEqual(["category", "custom", "sun", "difficulty", "container", "indoor"]);
+    expect(plantBadges(plant).find((b) => b.key === "custom")).toMatchObject({ label: "Custom", tone: "info" });
   });
 });

@@ -76,7 +76,8 @@ export function createLocalRepository(
     }
     if (raw === null) return { data: createEmptyAppData(), status: "empty" };
 
-    const result = importAppData(raw);
+    // Our own stored data is trusted for size: only user-supplied imports are capped.
+    const result = parseAppDataJson(raw);
     if (result.ok) return { data: sanitizeAppData(result.data), status: "ok" };
 
     backUp(raw);
@@ -107,7 +108,19 @@ export function exportAppData(data: AppData): string {
   return JSON.stringify(data, null, 2);
 }
 
+/** Largest backup accepted by `importAppData` (characters). Real backups are a few hundred KB. */
+export const MAX_IMPORT_CHARS = 5_000_000;
+export const IMPORT_TOO_LARGE_ERROR = "That file is too large to be a Garden Planner backup (limit 5 MB).";
+
+/** Parses user-supplied backup text. Refuses oversized input before parsing it. */
 export function importAppData(json: string): ParseResult {
+  if (json.length > MAX_IMPORT_CHARS) {
+    return { ok: false, error: IMPORT_TOO_LARGE_ERROR };
+  }
+  return parseAppDataJson(json);
+}
+
+function parseAppDataJson(json: string): ParseResult {
   let parsed: unknown;
   try {
     parsed = JSON.parse(json);

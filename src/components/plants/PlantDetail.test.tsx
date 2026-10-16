@@ -11,6 +11,14 @@ vi.mock("@/data/plants", async () => {
 
 const section = (name: RegExp | string) => within(screen.getByRole("region", { name }));
 
+/** Heading levels in document order, starting from the plant name (h1). */
+const headingLevels = () => screen.getAllByRole("heading").map((h) => Number(h.tagName[1]));
+const expectNoSkippedLevels = (levels: number[]) =>
+  levels.reduce((previous, level) => {
+    expect(level).toBeLessThanOrEqual(previous + 1);
+    return level;
+  }, 1);
+
 describe("PlantDetail", () => {
   it("renders the plant header and growing facts", async () => {
     renderWithAppData(<PlantDetail id="tomato" />);
@@ -30,7 +38,7 @@ describe("PlantDetail", () => {
 
   it("shows a not-found state for unknown ids", async () => {
     renderWithAppData(<PlantDetail id="nope" />);
-    expect(await screen.findByText(/plant not found/i)).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: /plant not found/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /plant library/i })).toHaveAttribute("href", "/plants");
   });
 
@@ -84,5 +92,15 @@ describe("PlantDetail", () => {
     expect(screen.getByRole("link", { name: "Loam" })).toHaveAttribute("href", "/guides#soil-loam");
     expect(screen.getByRole("link", { name: "Compost" })).toHaveAttribute("href", "/guides#fertilizer-compost");
     expect(screen.getByRole("link", { name: /Aphids/ })).toHaveAttribute("href", "/guides#insect-aphids");
+  });
+
+  it("has one h1 and sections that never skip a heading level", async () => {
+    renderWithAppData(<PlantDetail id="tomato" />, { data: makeAppData([makeGarden()]) });
+    await screen.findByRole("heading", { level: 1, name: /Tomato/ });
+    const levels = headingLevels();
+    expect(levels.filter((l) => l === 1)).toHaveLength(1);
+    expect(levels).toContain(2);
+    expect(levels).toContain(3);
+    expectNoSkippedLevels(levels);
   });
 });

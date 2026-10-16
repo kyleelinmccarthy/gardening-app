@@ -24,9 +24,14 @@ export function Recommendations() {
   const [category, setCategory] = useState<CategoryFilter>("all");
   const profile = activeGarden?.profile ?? null;
 
+  // Scoring every plant is the expensive part: do it once per catalog/profile, and let the toggle just filter.
+  const ranked = useMemo(
+    () => (profile ? recommendPlants(catalog.all(), profile, { includeBlocked: true }) : []),
+    [catalog, profile],
+  );
   const recs = useMemo(
-    () => (profile ? recommendPlants(catalog.all(), profile, { includeBlocked: showAll }) : []),
-    [catalog, profile, showAll],
+    () => (showAll ? ranked : ranked.filter((rec) => rec.verdict !== "not-recommended")),
+    [ranked, showAll],
   );
 
   if (!hydrated) return <LoadingState />;

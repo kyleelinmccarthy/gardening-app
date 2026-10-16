@@ -28,20 +28,18 @@ function weeksPhrase(weeks: number, reference: string): string {
 
 /** Climate-independent descriptions, e.g. "Start seeds indoors 6 weeks before last frost". */
 export function relativeWindows(planting: PlantingWindows): string[] {
-  const rows: string[] = [];
-  if (planting.startIndoorsWeeks !== undefined) {
-    rows.push(`${CALENDAR_EVENT_LABELS["start-indoors"]} ${weeksPhrase(planting.startIndoorsWeeks, "last spring frost")}`);
-  }
-  if (planting.directSowWeeks !== undefined) {
-    rows.push(`${CALENDAR_EVENT_LABELS["direct-sow"]} ${weeksPhrase(planting.directSowWeeks, "last spring frost")}`);
-  }
-  if (planting.transplantWeeks !== undefined) {
-    rows.push(`${CALENDAR_EVENT_LABELS.transplant} ${weeksPhrase(planting.transplantWeeks, "last spring frost")}`);
-  }
-  if (planting.fallSowWeeksBeforeFirstFrost !== undefined) {
-    rows.push(`${CALENDAR_EVENT_LABELS["fall-sow"]} ${planting.fallSowWeeksBeforeFirstFrost} weeks before first fall frost`);
-  }
-  return rows;
+  const spring = "last spring frost";
+  const fall = "first fall frost";
+  const entries: [CalendarEventType, number | undefined, string][] = [
+    ["start-indoors", planting.startIndoorsWeeks, spring],
+    ["direct-sow", planting.directSowWeeks, spring],
+    ["transplant", planting.transplantWeeks, spring],
+    // Fall sowing counts weeks *before* the first frost (negative = after, e.g. bulbs); weeksPhrase uses the opposite sign.
+    ["fall-sow", planting.fallSowWeeksBeforeFirstFrost === undefined ? undefined : -planting.fallSowWeeksBeforeFirstFrost, fall],
+  ];
+  return entries.flatMap(([type, weeks, reference]) =>
+    weeks === undefined ? [] : [`${CALENDAR_EVENT_LABELS[type]} ${weeksPhrase(weeks, reference)}`],
+  );
 }
 
 export interface ToolStatus {

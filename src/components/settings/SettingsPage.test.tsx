@@ -142,6 +142,46 @@ describe("SettingsPage", () => {
       expect(getData().gardens).toHaveLength(2);
     });
 
+    const chooseValidFile = async () => {
+      const input = await screen.findByLabelText("Import backup file");
+      fireEvent.change(input, { target: { files: [new File([exportAppData(makeAppData([]))], "b.json")] } });
+      return { input, dialog: await screen.findByRole("alertdialog") };
+    };
+
+    it("moves focus to Cancel when the import confirmation appears", async () => {
+      renderWithAppData(<SettingsPage />, { data: twoGardens() });
+      const { dialog } = await chooseValidFile();
+      await waitFor(() => expect(within(dialog).getByRole("button", { name: "Cancel" })).toHaveFocus());
+    });
+
+    it("cancels the import with Escape and returns focus to the file input", async () => {
+      const user = userEvent.setup();
+      const { getData } = renderWithAppData(<SettingsPage />, { data: twoGardens() });
+      const { input } = await chooseValidFile();
+      await user.keyboard("{Escape}");
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+      expect(input).toHaveFocus();
+      expect(getData().gardens).toHaveLength(2);
+    });
+
+    it("returns focus to the file input after clicking Cancel", async () => {
+      const user = userEvent.setup();
+      renderWithAppData(<SettingsPage />, { data: twoGardens() });
+      const { input, dialog } = await chooseValidFile();
+      await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+      expect(input).toHaveFocus();
+    });
+
+    it("rejects a file over 5 MB with a friendly message and no confirmation", async () => {
+      renderWithAppData(<SettingsPage />, { data: twoGardens() });
+      const input = await screen.findByLabelText("Import backup file");
+      const big = new File(["{}"], "big.json");
+      Object.defineProperty(big, "size", { value: 5_000_001 });
+      fireEvent.change(input, { target: { files: [big] } });
+      expect(await screen.findByRole("alert")).toHaveTextContent(/too large/i);
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    });
+
     it("shows an error for invalid files and keeps existing data", async () => {
       const { getData } = renderWithAppData(<SettingsPage />, { data: twoGardens() });
       const input = await screen.findByLabelText("Import backup file");

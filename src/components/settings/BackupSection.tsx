@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, type ChangeEvent } from "react";
+import { useEffect, useId, useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
 import { Button, Card } from "@/components/ui";
 import type { AppData } from "@/domain/types";
 import { exportAppData } from "@/storage/repository";
@@ -13,6 +13,16 @@ export function BackupSection() {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<AppData | null>(null);
   const [done, setDone] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  const wasPending = useRef(false);
+
+  // Focus follows the dialog: into it (on the safe choice) when it opens, back to the import control when it closes.
+  useEffect(() => {
+    if (pending) cancelRef.current?.focus();
+    else if (wasPending.current) fileInputRef.current?.focus();
+    wasPending.current = pending !== null;
+  }, [pending]);
 
   function exportJson() {
     downloadTextFile(backupFileName(), exportAppData(data));
@@ -31,6 +41,13 @@ export function BackupSection() {
     } else {
       setPending(null);
       setError(result.error);
+    }
+  }
+
+  function onDialogKeyDown(e: KeyboardEvent) {
+    if (e.key === "Escape") {
+      e.stopPropagation();
+      setPending(null);
     }
   }
 
@@ -56,6 +73,7 @@ export function BackupSection() {
           </label>
           <input
             id={inputId}
+            ref={fileInputRef}
             type="file"
             accept="application/json,.json"
             onChange={(e) => void onFile(e)}
@@ -75,7 +93,12 @@ export function BackupSection() {
           </p>
         )}
         {pending && (
-          <div role="alertdialog" aria-label="Confirm import" className="flex flex-col gap-3 rounded-lg border border-border bg-surface-muted p-3">
+          <div
+            role="alertdialog"
+            aria-label="Confirm import"
+            onKeyDown={onDialogKeyDown}
+            className="flex flex-col gap-3 rounded-lg border border-border bg-surface-muted p-3"
+          >
             <p className="text-sm text-foreground">
               This file contains {describeBackup(pending)}. Importing will replace all of your current data.
             </p>
@@ -83,7 +106,7 @@ export function BackupSection() {
               <Button variant="danger" onClick={confirmImport}>
                 Replace my data
               </Button>
-              <Button variant="secondary" onClick={() => setPending(null)}>
+              <Button ref={cancelRef} variant="secondary" onClick={() => setPending(null)}>
                 Cancel
               </Button>
             </div>

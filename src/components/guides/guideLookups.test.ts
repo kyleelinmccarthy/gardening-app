@@ -5,10 +5,8 @@ import { makePlant } from "@/test/fixtures";
 import {
   companionLists,
   groupToolsByCategory,
+  indexPlantsByInsect,
   insectsInGroup,
-  plantsAffectedBy,
-  plantsAttracting,
-  plantsRepelling,
   resolveHash,
   searchInsects,
 } from "./guideLookups";
@@ -19,19 +17,30 @@ const fennel = makePlant({ id: "fennel", name: "Fennel", companions: [], antagon
 const dill = makePlant({ id: "dill", name: "Dill", companions: ["tomato"] }); // one-sided companion
 const plants = [tomato, basil, fennel, dill];
 
-describe("reverse plant lookups", () => {
+describe("indexPlantsByInsect", () => {
+  const index = indexPlantsByInsect(plants);
+  const ids = (list: readonly { id: string }[]) => list.map((p) => p.id);
+
   it("finds plants affected by a pest, sorted by name", () => {
-    expect(plantsAffectedBy("aphids", plants).map((p) => p.id)).toEqual(["basil", "tomato"]);
-    expect(plantsAffectedBy("deer", plants)).toEqual([]);
+    expect(ids(index.get("aphids")!.affected)).toEqual(["basil", "tomato"]);
   });
 
   it("finds plants that attract a pollinator", () => {
-    expect(plantsAttracting("native-bees", plants).map((p) => p.id)).toEqual(["basil"]);
-    expect(plantsAttracting("honeybees", plants).map((p) => p.id)).toEqual(["basil", "tomato"]);
+    expect(ids(index.get("native-bees")!.attracting)).toEqual(["basil"]);
+    expect(ids(index.get("honeybees")!.attracting)).toEqual(["basil", "tomato"]);
   });
 
   it("finds plants that repel a pest", () => {
-    expect(plantsRepelling("aphids", plants).map((p) => p.id)).toEqual(["basil"]);
+    expect(ids(index.get("aphids")!.repelling)).toEqual(["basil"]);
+  });
+
+  it("has no entry for insects no plant mentions", () => {
+    expect(index.get("deer")).toBeUndefined();
+  });
+
+  it("sorts by name even when the input is not sorted", () => {
+    const unsorted = indexPlantsByInsect([tomato, basil]);
+    expect(ids(unsorted.get("aphids")!.affected)).toEqual(["basil", "tomato"]);
   });
 });
 

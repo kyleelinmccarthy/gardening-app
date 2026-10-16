@@ -36,6 +36,23 @@ describe("relativeWindows", () => {
   });
 });
 
+describe("relativeWindows fall sowing", () => {
+  const fall = (weeks: number) => relativeWindows({ fallSowWeeksBeforeFirstFrost: weeks });
+
+  it("uses the singular for one week", () => {
+    expect(fall(1)).toEqual(["Fall sowing 1 week before first fall frost"]);
+  });
+
+  it("describes bulbs planted after the first frost", () => {
+    expect(fall(-2)).toEqual(["Fall sowing 2 weeks after first fall frost"]);
+    expect(fall(-1)).toEqual(["Fall sowing 1 week after first fall frost"]);
+  });
+
+  it("describes sowing at the first frost", () => {
+    expect(fall(0)).toEqual(["Fall sowing at first fall frost"]);
+  });
+});
+
 describe("toolStatus", () => {
   it("flags owned tools", () => {
     const plant = makePlant({ requiredTools: ["trellis", "stakes"], helpfulTools: ["mulch"] });

@@ -18,6 +18,14 @@ beforeEach(() => {
   window.history.replaceState(null, "", "/guides");
 });
 
+/** Heading levels in document order, assuming the page supplies an h1 above the guides. */
+const headingLevels = () => screen.getAllByRole("heading").map((h) => Number(h.tagName[1]));
+const expectNoSkippedLevels = (levels: number[]) =>
+  levels.reduce((previous, level) => {
+    expect(level).toBeLessThanOrEqual(previous + 1);
+    return level;
+  }, 1);
+
 describe("Guides", () => {
   it("opens on pests & wildlife with plants affected (reverse lookup)", async () => {
     renderWithAppData(<Guides />);
@@ -102,5 +110,25 @@ describe("Guides", () => {
     expect(row).toHaveAttribute("aria-current", "true");
     expect(row).toHaveTextContent("-18°C to -12°C");
     expect(row).toHaveTextContent("Apr 15");
+  });
+
+  it("gives every tab panel an h2 so cards never skip a heading level", async () => {
+    renderWithAppData(<Guides />);
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs).toHaveLength(7);
+    for (const tab of tabs) {
+      await userEvent.click(tab);
+      const panel = within(screen.getByRole("tabpanel"));
+      expect(panel.getAllByRole("heading", { level: 2 })).toHaveLength(1);
+      expect(panel.getAllByRole("heading", { level: 3 }).length).toBeGreaterThan(0);
+      expectNoSkippedLevels(headingLevels());
+    }
+  });
+
+  it("nests tool cards under their category heading", async () => {
+    renderWithAppData(<Guides />);
+    await userEvent.click(screen.getByRole("tab", { name: /tools/i }));
+    const card = document.getElementById("tool-hand-trowel")!;
+    expect(within(card).getByRole("heading", { level: 4, name: /hand trowel/i })).toBeInTheDocument();
   });
 });

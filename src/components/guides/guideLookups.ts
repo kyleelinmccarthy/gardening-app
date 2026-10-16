@@ -7,19 +7,35 @@ import { TOOL_CATEGORY_LABELS } from "@/lib/labels";
 
 const byName = (a: Plant, b: Plant) => a.name.localeCompare(b.name);
 
-/** Plants that commonly suffer from this pest or animal pest. */
-export function plantsAffectedBy(insectId: InsectId, plants: readonly Plant[]): Plant[] {
-  return plants.filter((p) => p.pests.includes(insectId)).sort(byName);
+/** The plants that relate to one insect. Each list is sorted by plant name. */
+export interface InsectPlants {
+  /** Plants that commonly suffer from this pest or animal pest. */
+  affected: Plant[];
+  /** Plants that help deter this pest. */
+  repelling: Plant[];
+  /** Plants that draw in this beneficial insect or pollinator. */
+  attracting: Plant[];
 }
 
-/** Plants that draw in this beneficial insect or pollinator. */
-export function plantsAttracting(insectId: InsectId, plants: readonly Plant[]): Plant[] {
-  return plants.filter((p) => p.attracts.includes(insectId)).sort(byName);
-}
-
-/** Plants that help deter this pest. */
-export function plantsRepelling(insectId: InsectId, plants: readonly Plant[]): Plant[] {
-  return plants.filter((p) => p.repels.includes(insectId)).sort(byName);
+/** Reverse lookup built in one pass over the plants; insects no plant mentions have no entry. */
+export function indexPlantsByInsect(plants: readonly Plant[]): Map<InsectId, InsectPlants> {
+  const index = new Map<InsectId, InsectPlants>();
+  const entry = (id: InsectId) => {
+    let found = index.get(id);
+    if (!found) index.set(id, (found = { affected: [], repelling: [], attracting: [] }));
+    return found;
+  };
+  for (const plant of plants) {
+    for (const id of plant.pests) entry(id).affected.push(plant);
+    for (const id of plant.repels) entry(id).repelling.push(plant);
+    for (const id of plant.attracts) entry(id).attracting.push(plant);
+  }
+  for (const { affected, repelling, attracting } of index.values()) {
+    affected.sort(byName);
+    repelling.sort(byName);
+    attracting.sort(byName);
+  }
+  return index;
 }
 
 export interface CompanionLists {

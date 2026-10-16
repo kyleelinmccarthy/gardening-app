@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { exportAppData } from "@/storage/repository";
 import { makeAppData, makeGarden, makePlant } from "@/test/fixtures";
-import { backupFileName, describeBackup, downloadTextFile, readBackupFile } from "./backup";
+import { MAX_BACKUP_BYTES, backupFileName, describeBackup, downloadTextFile, readBackupFile } from "./backup";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -49,6 +49,15 @@ describe("readBackupFile", () => {
   it("returns an error for invalid JSON or the wrong shape", async () => {
     expect(await readBackupFile(file("not json"))).toMatchObject({ ok: false });
     expect(await readBackupFile(file('{"version":2}'))).toMatchObject({ ok: false });
+  });
+
+  it("rejects files over 5 MB without reading them", async () => {
+    const text = vi.fn();
+    const huge = { size: MAX_BACKUP_BYTES + 1, text } as unknown as Blob;
+    const result = await readBackupFile(huge);
+    expect(result).toMatchObject({ ok: false });
+    if (!result.ok) expect(result.error).toMatch(/too large.*5 MB/i);
+    expect(text).not.toHaveBeenCalled();
   });
 
   it("never throws when the file can't be read", async () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { PlantLink } from "@/components/plants/PlantLink";
 import { Card, Field, Select } from "@/components/ui";
 import type { Plant } from "@/domain/types";
@@ -53,8 +53,9 @@ export function CompanionGuide() {
   const { catalog } = useAppData();
   const plants = catalog.all();
   const [plantId, setPlantId] = useState("");
+  const options = useMemo(() => plants.map((p) => ({ value: p.id, label: `${p.emoji} ${p.name}` })), [plants]);
   const selected = plantId ? catalog.get(plantId) : undefined;
-  const lists = selected ? companionLists(selected, plants) : null;
+  const lists = useMemo(() => (selected ? companionLists(selected, plants) : null), [selected, plants]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -63,7 +64,7 @@ export function CompanionGuide() {
           <Field label="Plant" className="max-w-sm">
             <Select
               placeholder="Choose a plant…"
-              options={plants.map((p) => ({ value: p.id, label: `${p.emoji} ${p.name}` }))}
+              options={options}
               value={plantId}
               onChange={(e) => setPlantId(e.target.value)}
             />

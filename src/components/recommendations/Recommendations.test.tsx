@@ -13,6 +13,14 @@ vi.mock("@/data/plants", async () => {
 const withGarden = () => ({ data: makeAppData([makeGarden({ profile: createDefaultProfile() })]) });
 const names = () => screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent?.replace(/^\S+\s/, ""));
 
+/** Heading levels in document order, assuming the page supplies an h1 above the component. */
+const headingLevels = () => screen.getAllByRole("heading").map((h) => Number(h.tagName[1]));
+const expectNoSkippedLevels = (levels: number[]) =>
+  levels.reduce((previous, level) => {
+    expect(level).toBeLessThanOrEqual(previous + 1);
+    return level;
+  }, 1);
+
 describe("Recommendations", () => {
   it("asks for a garden when there is none", async () => {
     renderWithAppData(<Recommendations />);
@@ -28,11 +36,22 @@ describe("Recommendations", () => {
     expect(names()).not.toContain("Pothos"); // indoor-only: blocked in an outdoor garden
   });
 
-  it("reveals plants that aren't a good fit, with reasons, via the toggle", async () => {
+  it("reveals plants that aren't a good fit, with ⛔ reasons, via the toggle", async () => {
     renderWithAppData(<Recommendations />, withGarden());
-    await userEvent.click(await screen.findByRole("checkbox", { name: /aren't a good fit/i }));
+    const toggle = await screen.findByRole("checkbox", { name: /aren't a good fit/i });
+    expect(screen.queryByRole("heading", { level: 2, name: /Not recommended/ })).not.toBeInTheDocument();
+
+    await userEvent.click(toggle);
+    expect(screen.getByRole("heading", { level: 2, name: /Not recommended/ })).toBeInTheDocument();
     expect(names()).toContain("Pothos");
-    expect(screen.getAllByText(/Not suited to outdoor growing/i).length).toBeGreaterThan(0);
+    const pothos = within(screen.getByRole("heading", { level: 3, name: /Pothos/ }).closest("section")!);
+    const blocker = pothos.getByText(/Not suited to outdoor growing/i).closest("li")!;
+    expect(blocker).toHaveAttribute("data-kind", "blocker");
+    expect(blocker).toHaveTextContent("⛔");
+    expect(within(blocker).getByText("Blocker:")).toBeInTheDocument();
+
+    await userEvent.click(toggle);
+    expect(names()).not.toContain("Pothos");
   });
 
   it("filters by category", async () => {
@@ -48,5 +67,11 @@ describe("Recommendations", () => {
     renderWithAppData(<Recommendations />, withGarden());
     expect(await screen.findByRole("heading", { name: /how we score/i })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /add to my garden/i }).length).toBeGreaterThan(0);
+  });
+
+  it("nests plant cards under verdict groups without skipping heading levels", async () => {
+    renderWithAppData(<Recommendations />, withGarden());
+    await screen.findByRole("heading", { level: 2, name: /Great match/ });
+    expectNoSkippedLevels(headingLevels());
   });
 });

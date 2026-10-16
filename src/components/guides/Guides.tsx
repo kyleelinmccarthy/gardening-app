@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Tabs, type TabItem } from "@/components/ui";
 import { INSECTS } from "@/data/insects";
 import { CompanionGuide } from "./CompanionGuide";
@@ -12,15 +12,39 @@ import { ToolGuide } from "./ToolGuide";
 import { replaceHash, useLocationHash } from "./useLocationHash";
 import { ZoneGuide } from "./ZoneGuide";
 
-const TABS: readonly TabItem[] = [
-  { id: "pests", label: "🐛 Pests & wildlife", content: <InsectGuide group="pests" /> },
-  { id: "beneficials", label: "🐝 Beneficials & pollinators", content: <InsectGuide group="beneficials" /> },
-  { id: "soil", label: "🌍 Soil", content: <SoilGuide /> },
-  { id: "fertilizers", label: "🧪 Fertilizers", content: <FertilizerGuide /> },
-  { id: "tools", label: "🧰 Tools", content: <ToolGuide /> },
-  { id: "companions", label: "🤝 Companion planting", content: <CompanionGuide /> },
-  { id: "zones", label: "🗺️ Climate zones", content: <ZoneGuide /> },
+interface GuideTabDef {
+  id: GuideTab;
+  label: string;
+  /** Visually hidden `<h2>` that names the panel, so the cards inside (`<h3>`) never skip a level under the page `<h1>`. */
+  heading: string;
+  content: ReactNode;
+}
+
+const TAB_DEFS: readonly GuideTabDef[] = [
+  { id: "pests", label: "🐛 Pests & wildlife", heading: "Pests & wildlife", content: <InsectGuide group="pests" /> },
+  {
+    id: "beneficials",
+    label: "🐝 Beneficials & pollinators",
+    heading: "Beneficials & pollinators",
+    content: <InsectGuide group="beneficials" />,
+  },
+  { id: "soil", label: "🌍 Soil", heading: "Soil", content: <SoilGuide /> },
+  { id: "fertilizers", label: "🧪 Fertilizers", heading: "Fertilizers", content: <FertilizerGuide /> },
+  { id: "tools", label: "🧰 Tools", heading: "Tools", content: <ToolGuide /> },
+  { id: "companions", label: "🤝 Companion planting", heading: "Companion planting", content: <CompanionGuide /> },
+  { id: "zones", label: "🗺️ Climate zones", heading: "Climate zones", content: <ZoneGuide /> },
 ];
+
+const TABS: readonly TabItem[] = TAB_DEFS.map(({ id, label, heading, content }) => ({
+  id,
+  label,
+  content: (
+    <>
+      <h2 className="sr-only">{heading}</h2>
+      {content}
+    </>
+  ),
+}));
 
 const DEFAULT_TAB: GuideTab = "pests";
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button, Checkbox, Field, Select, TemperatureInput, TextInput } from "@/components/ui";
 import { ZONES } from "@/data/zones";
 import { formatTemperature } from "@/domain/climate";
@@ -25,6 +25,8 @@ const LIGHT_OPTIONS = toOptions(INDOOR_LIGHT_LABELS, INDOOR_LIGHTS);
 
 export function ClimateStep({ state, errors, dispatch, unit, lookupZone = (zip) => lookupZoneByZip(zip) }: ClimateStepProps) {
   const [status, setStatus] = useState<LookupStatus>({ kind: "idle" });
+  /** Synchronous guard: `status` is stale between two key presses in the same frame. */
+  const lookingUp = useRef(false);
   const zoneInfo = ZONES.find((z) => z.zone === state.zone);
   const zoneOptions = ZONES.map((z) => ({
     value: String(z.zone),
@@ -33,8 +35,15 @@ export function ClimateStep({ state, errors, dispatch, unit, lookupZone = (zip) 
   const unitLabel = unit === "C" ? "°C" : "°F";
 
   async function runLookup() {
+    if (lookingUp.current) return;
+    lookingUp.current = true;
     setStatus({ kind: "loading" });
-    const result = await lookupZone(state.zip);
+    let result: ZipLookupResult;
+    try {
+      result = await lookupZone(state.zip);
+    } finally {
+      lookingUp.current = false;
+    }
     if (result.ok) {
       dispatch({ type: "setZone", zone: result.zone });
       setStatus({
@@ -57,12 +66,16 @@ export function ClimateStep({ state, errors, dispatch, unit, lookupZone = (zip) 
           <Select
             options={zoneOptions}
             value={String(state.zone)}
-            onChange={(e) => dispatch({ type: "setZone", zone: Number(e.target.value) })}
+            onChange={(e) => {
+              // A hand-picked zone supersedes the "We selected zone N" message.
+              setStatus({ kind: "idle" });
+              dispatch({ type: "setZone", zone: Number(e.target.value) });
+            }}
           />
         </Field>
 
         <div className="flex flex-wrap items-end gap-2">
-          <Field label="ZIP code (optional)" hint="US only. Looks up your zone online." className="w-44">
+          <Field label="ZIP code (optional)" hint="US only." className="w-44">
             <TextInput
               inputMode="numeric"
               maxLength={5}
@@ -81,6 +94,7 @@ export function ClimateStep({ state, errors, dispatch, unit, lookupZone = (zip) 
             {status.kind === "loading" ? "Looking up…" : "Look up zone"}
           </Button>
         </div>
+        <p className="-mt-2 text-xs text-muted">Looks up your zone via phzmapi.org. Nothing else leaves your browser.</p>
         {status.kind === "done" && (
           <p role={status.ok ? "status" : "alert"} className={status.ok ? "text-sm text-success" : "text-sm text-danger"}>
             {status.message}

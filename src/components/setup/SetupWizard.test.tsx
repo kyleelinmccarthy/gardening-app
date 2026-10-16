@@ -253,6 +253,130 @@ describe("SetupWizard (editing)", () => {
   });
 });
 
+describe("SetupWizard switching with unsaved input", () => {
+  const existing = makeGarden({ id: "g1", name: "Backyard", profile: createDefaultProfile() });
+
+  it("asks before discarding edits when starting a new garden, and keeps them on cancel", async () => {
+    const user = userEvent.setup();
+    renderWithAppData(<SetupWizard />, { data: makeAppData([existing]) });
+    const name = await screen.findByLabelText("Garden name");
+    await user.type(name, " North");
+    await user.click(screen.getByRole("button", { name: /start a new garden instead/i }));
+
+    const prompt = screen.getByRole("group", { name: /discard/i });
+    expect(screen.getByLabelText("Garden name")).toHaveValue("Backyard North");
+    await user.click(within(prompt).getByRole("button", { name: "Cancel" }));
+    expect(screen.getByLabelText("Garden name")).toHaveValue("Backyard North");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Edit setup: Backyard");
+  });
+
+  it("switches to a blank form once the discard is confirmed", async () => {
+    const user = userEvent.setup();
+    renderWithAppData(<SetupWizard />, { data: makeAppData([existing]) });
+    await user.type(await screen.findByLabelText("Garden name"), " North");
+    await user.click(screen.getByRole("button", { name: /start a new garden instead/i }));
+    await user.click(screen.getByRole("button", { name: /yes, discard/i }));
+    expect(screen.getByLabelText("Garden name")).toHaveValue("");
+    expect(screen.getByRole("heading", { level: 1, name: /set up a new garden/i })).toBeInTheDocument();
+  });
+
+  it("also asks when leaving a half-filled new garden for the existing one", async () => {
+    search = "new=1";
+    const user = userEvent.setup();
+    renderWithAppData(<SetupWizard />, { data: makeAppData([existing]) });
+    await user.type(await screen.findByLabelText("Garden name"), "Balcony");
+    await user.click(screen.getByRole("button", { name: /edit backyard instead/i }));
+    expect(screen.getByRole("group", { name: /discard/i })).toBeInTheDocument();
+    expect(screen.getByLabelText("Garden name")).toHaveValue("Balcony");
+  });
+
+  it("does not ask when nothing was changed (or changes were reverted)", async () => {
+    const user = userEvent.setup();
+    renderWithAppData(<SetupWizard />, { data: makeAppData([existing]) });
+    const name = await screen.findByLabelText("Garden name");
+    await user.type(name, "x");
+    await user.type(name, "{Backspace}");
+    await user.click(screen.getByRole("button", { name: /start a new garden instead/i }));
+    expect(screen.queryByRole("group", { name: /discard/i })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Garden name")).toHaveValue("");
+  });
+});
+
+describe("SetupWizard focus management", () => {
+  it("focuses the first invalid control when Next fails validation", async () => {
+    const user = userEvent.setup();
+    renderWithAppData(<SetupWizard />);
+    await screen.findByLabelText("Garden name");
+    await next(user);
+    expect(screen.getByLabelText("Garden name")).toHaveFocus();
+  });
+
+  it("focuses the first invalid control on a later step", async () => {
+    const user = userEvent.setup();
+    renderWithAppData(<SetupWizard />);
+    await user.type(await screen.findByLabelText("Garden name"), "G");
+    await next(user);
+    await user.clear(screen.getByLabelText("Typical winter low (°F)"));
+    await user.clear(screen.getByLabelText("Typical summer high (°F)"));
+    await next(user);
+    expect(screen.getByLabelText("Typical summer high (°F)")).toHaveFocus();
+  });
+
+  it("moves focus to the new step's heading when the step changes", async () => {
+    const user = userEvent.setup();
+    renderWithAppData(<SetupWizard />);
+    await user.type(await screen.findByLabelText("Garden name"), "G");
+    expect(document.body).toHaveFocus();
+    await next(user);
+    const heading = screen.getByRole("heading", { level: 2, name: "Climate" });
+    expect(heading).toContainElement(document.activeElement as HTMLElement);
+    expect(document.activeElement).toHaveAttribute("tabindex", "-1");
+    await user.click(screen.getByRole("button", { name: "Back" }));
+    expect(screen.getByRole("heading", { level: 2, name: "Basics" })).toContainElement(document.activeElement as HTMLElement);
+  });
+
+  it("does not steal focus on first render", async () => {
+    renderWithAppData(<SetupWizard />);
+    await screen.findByLabelText("Garden name");
+    expect(document.body).toHaveFocus();
+  });
+
+  it("jumps to the invalid step and focuses its first invalid control when saving fails", async () => {
+    const user = userEvent.setup();
+    renderWithAppData(<SetupWizard />);
+    await user.type(await screen.findByLabelText("Garden name"), "G");
+    for (let i = 0; i < 6; i++) await next(user);
+    await user.click(screen.getByRole("button", { name: "Edit Basics" }));
+    await user.clear(screen.getByLabelText("Garden name"));
+    // Jump straight back to Review through the progress list.
+    await user.click(screen.getByRole("button", { name: /Review/ }));
+    await user.click(screen.getByRole("button", { name: "Create garden" }));
+    expect(screen.getByRole("heading", { level: 2, name: "Basics" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Garden name")).toHaveFocus();
+    expect(push).not.toHaveBeenCalled();
+  });
+});
+
+describe("SetupWizard review of incomplete steps", () => {
+  it("shows a dash for blank weekly hours and flags the step with a fix link", async () => {
+    const user = userEvent.setup();
+    renderWithAppData(<SetupWizard />);
+    await user.type(await screen.findByLabelText("Garden name"), "G");
+    for (let i = 0; i < 6; i++) await next(user);
+    // The progress list lets users jump to any step already reached, including Review.
+    await user.click(screen.getByRole("button", { name: /What to grow/ }));
+    await user.clear(screen.getByLabelText("Hours per week you can spend"));
+    await user.click(screen.getByRole("button", { name: /Review/ }));
+
+    expect(screen.getByRole("heading", { level: 2, name: "Review" })).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent("NaN");
+    expect(screen.getByText("Time per week").nextElementSibling).toHaveTextContent("—");
+    const alert = screen.getByRole("alert");
+    await user.click(within(alert).getByRole("button", { name: /What to grow/ }));
+    expect(screen.getByRole("heading", { level: 2, name: "What to grow" })).toBeInTheDocument();
+  });
+});
+
 describe("SetupWizard tools step", () => {
   it("groups tools by category and notes that missing tools never exclude plants", async () => {
     const user = userEvent.setup();
