@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { FertilizerId, InsectId, SoilType, ToolId } from "@/domain/types";
 import { SOIL_TYPES } from "@/domain/types";
-import { FERTILIZERS, INSECTS, SOILS, TOOLS, ZONES, getInsect } from "@/data";
+import { FERTILIZERS } from "@/data/fertilizers";
+import { INSECTS, getInsect } from "@/data/insects";
+import { SOILS } from "@/data/soils";
+import { TOOLS } from "@/data/tools";
+import { ZONES } from "@/data/zones";
 
 // Exhaustive records: adding a union member without updating these is a compile error.
 const INSECT_IDS = {
