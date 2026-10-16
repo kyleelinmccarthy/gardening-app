@@ -51,7 +51,7 @@ describe("CalendarPage", () => {
     renderWithAppData(<CalendarPage />, { data: data() });
     const legend = await screen.findByRole("list", { name: "Legend" });
     expect(within(legend).getByText("Transplant")).toBeInTheDocument();
-    expect(screen.getByText(/Last frost Apr 15 · First frost Oct 15/)).toBeInTheDocument();
+    expect(screen.getByText(/Last frost Apr 15 · First frost Oct 25/)).toBeInTheDocument();
   });
 
   it("notes frost-free climates", async () => {

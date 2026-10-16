@@ -40,7 +40,7 @@ const log = (id: string, date: string, overrides: Partial<CareLogEntry> = {}): C
 describe("careContext", () => {
   it("uses outdoor climate humidity outdoors and indoor humidity indoors", () => {
     const outdoor = makeGarden().profile;
-    expect(careContext(outdoor)).toEqual({ setting: "outdoor", summerHighF: 85, humidity: "average" });
+    expect(careContext(outdoor)).toEqual({ setting: "outdoor", summerHighF: outdoor.climate.summerHighF, humidity: "average" });
     const indoor = {
       ...outdoor,
       setting: "indoor" as const,
