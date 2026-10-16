@@ -40,6 +40,14 @@ const planting = (overrides: Partial<Planting> = {}): Planting => ({
 const setup = (garden: Partial<Garden> = {}) =>
   renderWithAppData(<CarePage />, { data: makeAppData([makeGarden({ plantings: [planting()], ...garden })]) });
 
+/** Heading levels in document order, e.g. [1, 2, 3]. */
+const headingLevels = () => screen.getAllByRole("heading").map((h) => Number(h.tagName.slice(1)));
+const expectNoSkippedHeadingLevels = () => {
+  const levels = headingLevels();
+  expect(levels[0]).toBe(1);
+  levels.slice(1).forEach((level, i) => expect(level).toBeLessThanOrEqual(levels[i] + 1));
+};
+
 const openTab = async (name: string) => userEvent.click(await screen.findByRole("tab", { name }));
 
 describe("CarePage", () => {
@@ -190,6 +198,28 @@ describe("CarePage", () => {
       expect(screen.getByText("Repeats every 14 days")).toBeInTheDocument();
     });
 
+    it("reschedules a repeating reminder when checked instead of finishing it", async () => {
+      const user = userEvent.setup();
+      const { getData } = setup({
+        plantings: [],
+        reminders: [{ id: "r1", title: "Turn compost", dueDate: today, repeatDays: 7, done: false }],
+      });
+      await openTab("Reminders");
+      await user.click(await screen.findByLabelText("Done: Turn compost"));
+      expect(getData().gardens[0].reminders[0]).toMatchObject({ done: false, dueDate: inDays(7) });
+    });
+
+    it("unchecks a finished one-off reminder", async () => {
+      const user = userEvent.setup();
+      const { getData } = setup({
+        plantings: [],
+        reminders: [{ id: "r1", title: "Buy seeds", dueDate: today, done: true }],
+      });
+      await openTab("Reminders");
+      await user.click(await screen.findByLabelText("Done: Buy seeds"));
+      expect(getData().gardens[0].reminders[0].done).toBe(false);
+    });
+
     it("validates the title", async () => {
       const user = userEvent.setup();
       setup();
@@ -316,6 +346,21 @@ describe("CarePage", () => {
       await user.click(screen.getByRole("button", { name: "Delete Aphids" }));
       await user.click(screen.getByRole("button", { name: "Yes, delete" }));
       expect(getData().gardens[0].journal).toEqual([]);
+    });
+  });
+
+  describe("heading order", () => {
+    const full: Partial<Garden> = {
+      reminders: [{ id: "r1", title: "Buy seeds", dueDate: inDays(2), done: false }],
+      careLog: [{ id: "l1", plantingId: "p1", type: "water", date: daysAgo(1) }],
+      journal: [{ id: "j1", date: daysAgo(1), title: "Aphids", text: "Found some" }],
+    };
+
+    it.each(["Today", "My plants", "Reminders", "Care log", "Journal"])("never skips a level on the %s tab", async (tab) => {
+      setup(full);
+      await openTab(tab);
+      await screen.findAllByRole("heading", { level: 2 });
+      expectNoSkippedHeadingLevels();
     });
   });
 });

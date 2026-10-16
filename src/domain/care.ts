@@ -245,17 +245,23 @@ function nextOccurrence(dueDate: string, repeatDays: number, date: string): stri
 }
 
 /**
+ * Changes that completing a reminder on `today` makes: a repeating reminder
+ * moves to its next occurrence, a one-off reminder is marked done.
+ */
+export function completeReminder(reminder: Pick<Reminder, "dueDate" | "repeatDays">, today: string): Partial<Reminder> {
+  if (reminder.repeatDays !== undefined && reminder.repeatDays > 0) {
+    return { dueDate: nextOccurrence(reminder.dueDate, reminder.repeatDays, today) };
+  }
+  return { done: true };
+}
+
+/**
  * Pure result of completing a task on `date`: a care-log entry for planting
- * tasks, or a reminder update (reschedule if recurring, otherwise done).
+ * tasks, or a reminder update (see `completeReminder`).
  */
 export function completeTask(task: CareTaskItem, date: string, id: string): TaskCompletion {
   if (task.reminderId) {
-    if (task.repeatDays !== undefined && task.repeatDays > 0) {
-      return {
-        reminderUpdate: { id: task.reminderId, dueDate: nextOccurrence(task.dueDate, task.repeatDays, date) },
-      };
-    }
-    return { reminderUpdate: { id: task.reminderId, done: true } };
+    return { reminderUpdate: { id: task.reminderId, ...completeReminder(task, date) } };
   }
   return { log: { id, plantingId: task.plantingId, type: task.type, date } };
 }

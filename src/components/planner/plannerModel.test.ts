@@ -4,9 +4,11 @@ import {
   bedToFormValues,
   buildPalette,
   cellLabel,
+  cellStatusText,
   conflictWarning,
   defaultBedValues,
   densityHint,
+  describeCrowding,
   describePair,
   parseBedForm,
   shortName,
@@ -50,6 +52,24 @@ describe("cell and plant labels", () => {
     expect(cellLabel(0, 0)).toBe("Row 1, column 1: empty");
   });
 
+  it("cellLabel includes the companion status and crowding", () => {
+    expect(cellLabel(0, 1, tomato, { status: "bad" })).toBe("Row 2, column 1: Tomato — next to a plant it should be kept apart from");
+    expect(cellLabel(0, 1, tomato, { status: "good" })).toBe("Row 2, column 1: Tomato — good companions nearby");
+    expect(cellLabel(0, 1, tomato, { status: "neutral", crowded: true })).toBe("Row 2, column 1: Tomato — crowded");
+    expect(cellLabel(0, 1, tomato, { status: "bad", crowded: true })).toBe(
+      "Row 2, column 1: Tomato — next to a plant it should be kept apart from, crowded",
+    );
+  });
+
+  it("cellLabel adds nothing for a neutral, uncrowded plant", () => {
+    expect(cellLabel(0, 0, tomato, { status: "neutral", crowded: false })).toBe("Row 1, column 1: Tomato");
+  });
+
+  it("cellStatusText is null when there is nothing to say", () => {
+    expect(cellStatusText("neutral", false)).toBeNull();
+    expect(cellStatusText("good", false)).toBe("good companions nearby");
+  });
+
   it("shortName truncates long names", () => {
     expect(shortName("Basil")).toBe("Basil");
     expect(shortName("Cherry Tomato", 8)).toBe("Cherry …");
@@ -86,7 +106,25 @@ describe("densityHint", () => {
   });
 
   it("reports multi-square plants", () => {
-    expect(densityHint(tomato, 12)).toBe("needs 2×2 squares");
+    expect(densityHint(tomato, 12)).toBe("Spreads over about 2×2 squares — keep neighbouring squares free");
+    expect(densityHint(makePlant({ spacingInches: 36 }), 12)).toBe("Spreads over about 3×3 squares — keep neighbouring squares free");
+  });
+});
+
+describe("describeCrowding", () => {
+  const at = (plantId: string, x: number, y: number) => ({ plantId, x, y });
+
+  it("names the crowding neighbour and its 1-based position", () => {
+    expect(describeCrowding({ ...at("tomato", 0, 0), neighbours: [at("basil", 1, 0)] }, catalog, 12)).toBe(
+      "Tomato needs about 2×2 squares — Basil at row 1, col 2 is crowding it",
+    );
+  });
+
+  it("lists several neighbours", () => {
+    const issue = { ...at("tomato", 1, 1), neighbours: [at("basil", 0, 0), at("fennel", 2, 1), at("basil", 0, 2)] };
+    expect(describeCrowding(issue, catalog, 12)).toBe(
+      "Tomato needs about 2×2 squares — Basil at row 1, col 1, Fennel at row 2, col 3 and Basil at row 3, col 1 are crowding it",
+    );
   });
 });
 

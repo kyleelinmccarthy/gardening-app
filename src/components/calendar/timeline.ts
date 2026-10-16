@@ -2,7 +2,7 @@
  * Pure helpers for the planting-calendar timeline: date → percent geometry,
  * lane packing, per-plant grouping and the text used for tooltips.
  */
-import { diffDays, formatDisplayDate, MONTH_NAMES_SHORT, parseIsoDate } from "@/domain/dates";
+import { diffDays, formatDisplayDate, MONTH_NAMES_SHORT, monthDayToIso, parseIsoDate } from "@/domain/dates";
 import type { CalendarEvent, ClimateProfile, Garden } from "@/domain/types";
 import { CALENDAR_EVENT_LABELS } from "@/lib/labels";
 
@@ -40,6 +40,13 @@ export function barGeometry(event: Pick<CalendarEvent, "start" | "end">, year: n
   const endDay = yearOf(event.end) > year ? total : dayOfYear(event.end);
   const left = ((startDay - 1) / total) * 100;
   return { left, width: (endDay / total) * 100 - left };
+}
+
+/** Narrowest bar (percent of the year) that still has room for its short type label. */
+export const BAR_LABEL_MIN_WIDTH_PERCENT = 6;
+
+export function barLabelFits(widthPercent: number): boolean {
+  return widthPercent >= BAR_LABEL_MIN_WIDTH_PERCENT;
 }
 
 export interface MonthColumn {
@@ -118,7 +125,7 @@ export function frostMarkers(climate: Pick<ClimateProfile, "lastFrost" | "firstF
   if (climate.lastFrost === null && climate.firstFrost === null) return { frostFree: true };
   const marker = (md: string | null): FrostMarker | undefined => {
     if (md === null) return undefined;
-    const date = `${String(year).padStart(4, "0")}-${md}`;
+    const date = monthDayToIso(md, year);
     return { date, percent: dateToPercent(date, year) };
   };
   return { frostFree: false, lastFrost: marker(climate.lastFrost), firstFrost: marker(climate.firstFrost) };

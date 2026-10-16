@@ -5,8 +5,10 @@ import type { CalendarEvent, ClimateProfile, Plant, PlantCatalog } from "@/domai
 import { CALENDAR_EVENT_LABELS } from "@/lib/labels";
 import { cn } from "@/lib/cn";
 import { formatDisplayDate } from "@/domain/dates";
-import { EVENT_BAR_CLASSES, EVENT_TYPE_ORDER } from "./event-styles";
+import { EVENT_SHORT_LABELS, EVENT_TYPE_ORDER } from "./event-styles";
+import { EventSwatch } from "./EventSwatch";
 import {
+  barLabelFits,
   buildTimelineRows,
   dateToPercent,
   eventDescription,
@@ -32,7 +34,7 @@ function Legend() {
     <ul aria-label="Legend" className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
       {EVENT_TYPE_ORDER.map((type) => (
         <li key={type} className="flex items-center gap-1.5">
-          <span aria-hidden="true" className={cn("inline-block h-3 w-5 rounded-sm", EVENT_BAR_CLASSES[type])} />
+          <EventSwatch type={type} aria-hidden="true" className="inline-block h-3 w-5" />
           {CALENDAR_EVENT_LABELS[type]}
         </li>
       ))}
@@ -64,6 +66,13 @@ export function TimelineView({ year, plantIds, events, climate, catalog, today }
             {frost.lastFrost && <>Last frost {formatDisplayDate(frost.lastFrost.date)}</>}
             {frost.lastFrost && frost.firstFrost && " · "}
             {frost.firstFrost && <>First frost {formatDisplayDate(frost.firstFrost.date)}</>}
+          </>
+        )}
+        {todayPercent !== null && (
+          <>
+            {" · "}
+            <span aria-hidden="true" className="mr-1 inline-block h-3 w-0.5 bg-danger align-middle" />
+            Today {formatDisplayDate(today)}
           </>
         )}
       </p>
@@ -98,19 +107,25 @@ export function TimelineView({ year, plantIds, events, climate, catalog, today }
                   {row.bars.map((bar) => {
                     const description = eventDescription(plant?.name ?? row.plantId, bar.event);
                     return (
-                      <span
+                      <EventSwatch
                         key={`${bar.event.type}-${bar.event.start}`}
+                        type={bar.event.type}
                         role="img"
                         aria-label={description}
                         title={description}
-                        className={cn("absolute rounded-sm", EVENT_BAR_CLASSES[bar.event.type])}
+                        className="absolute overflow-hidden whitespace-nowrap px-1 text-[10px] font-semibold leading-none text-white"
                         style={{
                           left: `${bar.left}%`,
                           width: `${bar.width}%`,
                           top: `${ROW_PADDING_REM / 2 + bar.lane * LANE_HEIGHT_REM}rem`,
                           height: `${LANE_HEIGHT_REM - 0.2}rem`,
+                          lineHeight: `${LANE_HEIGHT_REM - 0.2}rem`,
                         }}
-                      />
+                      >
+                        {barLabelFits(bar.width) && (
+                          <span className="rounded-sm bg-black/45 px-0.5">{EVENT_SHORT_LABELS[bar.event.type]}</span>
+                        )}
+                      </EventSwatch>
                     );
                   })}
                   {row.bars.length === 0 && (

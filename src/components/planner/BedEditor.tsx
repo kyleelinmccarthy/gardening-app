@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Badge, Button, Card, ConfirmButton } from "@/components/ui";
-import { analyzeBed, placementConflicts, suggestCompanions } from "@/domain/companions";
+import { analyzeBed, crowdingIssues, placementConflicts, suggestCompanions } from "@/domain/companions";
 import { todayIso } from "@/domain/dates";
 import { recommendPlants } from "@/domain/recommendation";
 import type { Bed, Garden } from "@/domain/types";
@@ -52,6 +52,8 @@ export function BedEditor({ garden, bed, onDeleted }: BedEditorProps) {
     [allPlants, gardenPlantIds, recommended, query],
   );
   const analysis = useMemo(() => analyzeBed(bed, catalog), [bed, catalog]);
+  const crowding = useMemo(() => crowdingIssues(bed, catalog), [bed, catalog]);
+  const crowdedCells = useMemo(() => new Set(crowding.map((c) => `${c.x},${c.y}`)), [crowding]);
 
   const selectedPlant = tool?.kind === "plant" ? catalog.get(tool.plantId) : undefined;
   const suggestions = useMemo(
@@ -131,13 +133,14 @@ export function BedEditor({ garden, bed, onDeleted }: BedEditorProps) {
               </p>
             )}
             {sunNote && <p role="status" className="rounded-md bg-warning-soft px-2 py-1 text-sm text-warning">☀ {sunNote}</p>}
-            {liveConflict && <p role="alert" className="rounded-md bg-danger-soft px-2 py-1 text-sm text-danger">⚠ {liveConflict}</p>}
+            {liveConflict && <p role="status" className="rounded-md bg-danger-soft px-2 py-1 text-sm text-danger">⚠ {liveConflict}</p>}
           </div>
 
           <BedGrid
             bed={bed}
             catalog={catalog}
             cellStatus={analysis.cellStatus}
+            crowdedCells={crowdedCells}
             onCellClick={handleCellClick}
             onCellActive={setActive}
           />
@@ -154,6 +157,7 @@ export function BedEditor({ garden, bed, onDeleted }: BedEditorProps) {
           <AnalysisPanel
             bed={bed}
             analysis={analysis}
+            crowding={crowding}
             catalog={catalog}
             suggestions={suggestions}
             selectedPlant={selectedPlant}

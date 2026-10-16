@@ -1,14 +1,16 @@
 "use client";
 
 import { Card } from "@/components/ui";
-import type { BedAnalysis } from "@/domain/companions";
+import type { BedAnalysis, CrowdingIssue } from "@/domain/companions";
 import type { CompanionPair, Plant, PlantCatalog } from "@/domain/types";
-import { describePair, summarizePlacements } from "./plannerModel";
+import { describeCrowding, describePair, summarizePlacements } from "./plannerModel";
 import type { Bed } from "@/domain/types";
 
 export interface AnalysisPanelProps {
   bed: Bed;
   analysis: BedAnalysis;
+  /** Multi-square plants with a neighbour inside their footprint. */
+  crowding: readonly CrowdingIssue[];
   catalog: PlantCatalog;
   /** Good companions of the plant currently selected in the palette. */
   suggestions: readonly Plant[];
@@ -36,7 +38,7 @@ function PairList({ pairs, catalog, symbol, empty }: { pairs: readonly Companion
 }
 
 /** Conflicts, benefits, plant counts and companion suggestions for the bed. */
-export function AnalysisPanel({ bed, analysis, catalog, suggestions, selectedPlant, onPickSuggestion }: AnalysisPanelProps) {
+export function AnalysisPanel({ bed, analysis, crowding, catalog, suggestions, selectedPlant, onPickSuggestion }: AnalysisPanelProps) {
   const summary = summarizePlacements(bed, catalog);
   return (
     <Card title="Bed analysis" headingLevel="h3" className="flex flex-col gap-4">
@@ -48,6 +50,18 @@ export function AnalysisPanel({ bed, analysis, catalog, suggestions, selectedPla
         <h4 className="mb-1.5 text-sm font-semibold text-success">✓ Good pairings ({analysis.benefits.length})</h4>
         <PairList pairs={analysis.benefits} catalog={catalog} symbol="♥" empty="No companion pairs yet. Plant friends side by side." />
       </section>
+      {crowding.length > 0 && (
+        <section aria-label="Crowding">
+          <h4 className="mb-1.5 text-sm font-semibold text-warning">↔ Crowding ({crowding.length})</h4>
+          <ul className="flex flex-col gap-2">
+            {crowding.map((issue) => (
+              <li key={`${issue.x},${issue.y}`} className="text-sm">
+                {describeCrowding(issue, catalog, bed.cellSizeInches)}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {selectedPlant && (
         <section aria-label="Good companions to add">
           <h4 className="mb-1.5 text-sm font-semibold">Good companions to add for {selectedPlant.name}</h4>

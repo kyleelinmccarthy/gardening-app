@@ -11,6 +11,7 @@ vi.mock("@/data/plants", async () => {
     BUILTIN_PLANTS: [
       makePlant({ id: "tomato", name: "Tomato", emoji: "🍅", planting: { startIndoorsWeeks: -6, transplantWeeks: 2 }, daysToMaturity: { min: 60, max: 80 } }),
       makePlant({ id: "lettuce", name: "Lettuce", emoji: "🥬", planting: { directSowWeeks: -4 }, daysToMaturity: { min: 30, max: 45 } }),
+      makePlant({ id: "kale", name: "Kale", emoji: "🥬", planting: { fallSowWeeksBeforeFirstFrost: 2 }, daysToMaturity: { min: 30, max: 100 } }),
       makePlant({ id: "fern", name: "Fern", emoji: "🪴", planting: { notes: "Plant any time." }, daysToMaturity: undefined }),
     ],
   };
@@ -32,6 +33,8 @@ const data = (plantings = [planting("tomato")], profile = {}) => {
 };
 
 describe("CalendarPage", () => {
+  afterEach(() => vi.useRealTimers());
+
   it("prompts for setup without a garden", async () => {
     renderWithAppData(<CalendarPage />);
     expect(await screen.findByRole("link", { name: /set up my garden/i })).toBeInTheDocument();
@@ -96,6 +99,46 @@ describe("CalendarPage", () => {
     expect(screen.getByRole("img", { name: /Tomato: Transplant, Apr 29 – May 12/ })).toBeInTheDocument();
   });
 
+  it("announces the Today marker and frost dates as text", async () => {
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date(2026, 3, 20, 12) });
+    renderWithAppData(<CalendarPage />, { data: data() });
+    expect(await screen.findByText(/Today Apr 20/)).toBeInTheDocument();
+    expect(screen.getByText(/Last frost Apr 15/)).toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
+  it("does not crash on a Feb 29 frost date in a non-leap year", async () => {
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date(2027, 3, 20, 12) });
+    const climate = { hardinessZone: 7, lastFrost: "02-29", firstFrost: "10-25", summerHighF: 85, winterLowF: 10, humidity: "average" as const };
+    renderWithAppData(<CalendarPage />, { data: data([planting("tomato")], { climate }) });
+    expect(await screen.findByRole("group", { name: "Tomato schedule" })).toBeInTheDocument();
+    expect(screen.getByText(/Last frost Feb 28/)).toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
+  it("labels wide bars with their type and keeps bars distinguishable without colour", async () => {
+    renderWithAppData(<CalendarPage />, { data: data([planting("kale"), planting("tomato")]) });
+    const kale = await screen.findByRole("group", { name: "Kale schedule" });
+    expect(within(kale).getByRole("img", { name: /Kale: Harvest/ })).toHaveTextContent("Harvest");
+    // Narrow bars (Tomato's 14-day windows) stay unlabelled but carry the same patterns.
+    const row = screen.getByRole("group", { name: "Tomato schedule" });
+    expect(within(row).getByRole("img", { name: /Tomato: Transplant/ })).toHaveTextContent("");
+    const patterns = within(row).getAllByRole("img").map((bar) => (bar as HTMLElement).style.backgroundImage);
+    expect(new Set(patterns).size).toBeGreaterThan(1);
+  });
+
+  it("never skips a heading level", async () => {
+    const user = userEvent.setup();
+    renderWithAppData(<CalendarPage />, { data: data() });
+    await screen.findByRole("group", { name: "Tomato schedule" });
+    for (const tab of ["Timeline", "By month", "Upcoming"]) {
+      await user.click(screen.getByRole("tab", { name: tab }));
+      const levels = screen.getAllByRole("heading").map((h) => Number(h.tagName.slice(1)));
+      expect(levels[0]).toBe(1);
+      levels.slice(1).forEach((level, i) => expect(level).toBeLessThanOrEqual(levels[i] + 1));
+    }
+  });
+
   it("explains plants without planting windows", async () => {
     renderWithAppData(<CalendarPage />, { data: data([planting("fern")]) });
     expect(await screen.findByText(/No scheduled windows — Plant any time\./)).toBeInTheDocument();
@@ -112,6 +155,17 @@ describe("CalendarPage", () => {
 
   describe("upcoming tab", () => {
     afterEach(() => vi.useRealTimers());
+
+    it("includes events that began last year when the window spans New Year", async () => {
+      // Default frost 10-25: kale fall-sow starts Oct 11 2026, harvest Nov 10 2026 – Jan 19 2027.
+      vi.useFakeTimers({ toFake: ["Date"], now: new Date(2027, 0, 5, 12) });
+      const user = userEvent.setup();
+      renderWithAppData(<CalendarPage />, { data: data([planting("kale")]) });
+      await user.click(await screen.findByRole("tab", { name: "Upcoming" }));
+      const list = screen.getByRole("list", { name: "Next 30 days" });
+      expect(within(list).getByText("Harvest")).toBeInTheDocument();
+      expect(within(list).getByText(/Open now, until Jan 19/)).toBeInTheDocument();
+    });
 
     it("lists events starting within 30 days", async () => {
       vi.useFakeTimers({ toFake: ["Date"], now: new Date(2026, 3, 20, 12) });

@@ -115,6 +115,44 @@ export function plantsPerCell(plant: Plant, cellSizeInches: number): PlantsPerCe
   return { perCell: 1, cellsNeeded: span * span };
 }
 
+/** Side, in cells, of the square block a plant needs (1 when it fits in a single cell). */
+export function footprintSpan(plant: Plant, cellSizeInches: number): number {
+  return Math.round(Math.sqrt(plantsPerCell(plant, cellSizeInches).cellsNeeded));
+}
+
+export interface CrowdingNeighbour {
+  plantId: string;
+  x: number;
+  y: number;
+}
+
+export interface CrowdingIssue extends CrowdingNeighbour {
+  /** Other placements inside the plant's footprint zone, in reading order (row, then column). */
+  neighbours: CrowdingNeighbour[];
+}
+
+/**
+ * Plants that need several squares (see `plantsPerCell`) but have another
+ * plant within (span - 1) cells of them (Chebyshev distance). The plant is
+ * placed in a single cell, so this is a KISS stand-in for modelling the whole
+ * footprint.
+ */
+export function crowdingIssues(bed: Bed, catalog: PlantCatalog): CrowdingIssue[] {
+  const issues: CrowdingIssue[] = [];
+  for (const placement of bed.placements) {
+    const plant = catalog.get(placement.plantId);
+    if (!plant) continue;
+    const reach = footprintSpan(plant, bed.cellSizeInches) - 1;
+    if (reach < 1) continue;
+    const neighbours = bed.placements
+      .filter((o) => o !== placement && Math.max(Math.abs(o.x - placement.x), Math.abs(o.y - placement.y)) <= reach)
+      .map(({ plantId, x, y }) => ({ plantId, x, y }))
+      .sort((a, b) => a.y - b.y || a.x - b.x);
+    if (neighbours.length > 0) issues.push({ plantId: placement.plantId, x: placement.x, y: placement.y, neighbours });
+  }
+  return issues;
+}
+
 /** Antagonist pairs that would form if `plantId` were placed at (x, y) in the bed. */
 export function placementConflicts(
   bed: Bed,

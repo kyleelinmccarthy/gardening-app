@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { PlantLink } from "@/components/plants/PlantLink";
 import { Badge, Button, Card, Checkbox, ConfirmButton, Field, NumberInput, Select, TextInput } from "@/components/ui";
+import { completeReminder } from "@/domain/care";
 import { formatDisplayDate, todayIso } from "@/domain/dates";
 import type { Garden, Reminder } from "@/domain/types";
 import { createId } from "@/lib/id";
@@ -106,7 +107,12 @@ function ReminderItem({ garden, reminder, today }: { garden: Garden; reminder: R
           </span>
         }
         onChange={(e) =>
-          dispatch({ type: "reminder/update", gardenId: garden.id, reminderId: reminder.id, changes: { done: e.target.checked } })
+          dispatch({
+            type: "reminder/update",
+            gardenId: garden.id,
+            reminderId: reminder.id,
+            changes: e.target.checked ? completeReminder(reminder, today) : { done: false },
+          })
         }
       />
       <div className="flex gap-2">
@@ -133,7 +139,7 @@ export function RemindersTab({ garden }: { garden: Garden }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <Card title="New reminder" headingLevel="h3">
+      <Card title="New reminder">
         <ReminderForm
           key={formKey}
           garden={garden}
@@ -149,7 +155,7 @@ export function RemindersTab({ garden }: { garden: Garden }) {
           }}
         />
       </Card>
-      <Card title="Your reminders" headingLevel="h3">
+      <Card title="Your reminders">
         {reminders.length === 0 ? (
           <p className="text-sm text-muted">No reminders yet.</p>
         ) : (

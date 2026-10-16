@@ -85,7 +85,7 @@ describe("PlannerPage", () => {
     const user = userEvent.setup();
     renderWithAppData(<PlannerPage />, { data: withBed() });
     await user.click(await screen.findByRole("button", { name: "Tomato" }));
-    expect(screen.getByText("needs 2×2 squares")).toBeInTheDocument();
+    expect(screen.getByText("Spreads over about 2×2 squares — keep neighbouring squares free")).toBeInTheDocument();
   });
 
   it("warns live about a conflicting neighbour before placing", async () => {
@@ -95,13 +95,73 @@ describe("PlannerPage", () => {
     });
     await user.click(await screen.findByRole("button", { name: "Fennel" }));
     await user.hover(screen.getByRole("button", { name: "Row 1, column 2: empty" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("Fennel conflicts with Tomato next to it");
+    // A polite status, not an alert: it changes on every hover and focus.
+    expect(screen.getByRole("status")).toHaveTextContent("Fennel conflicts with Tomato next to it");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 
     await user.unhover(screen.getByRole("button", { name: "Row 1, column 2: empty" }));
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
     // Far from the tomato there is no conflict.
     await user.hover(screen.getByRole("button", { name: "Row 2, column 3: empty" }));
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("places a suggested companion with a planting id and date, like any other placement", async () => {
+    const user = userEvent.setup();
+    const { getData } = renderWithAppData(<PlannerPage />, { data: withBed() });
+    await user.click(await screen.findByRole("button", { name: "Tomato" }));
+    await user.click(within(screen.getByRole("region", { name: "Good companions to add" })).getByRole("button", { name: "Use Basil" }));
+    await user.click(screen.getByRole("button", { name: "Row 2, column 1: empty" }));
+    expect(getData().gardens[0].plantings).toMatchObject([{ plantId: "basil", bedId: "bed-1", plantedOn: todayIso() }]);
+  });
+
+  describe("multi-square plants", () => {
+    const crowded = (neighbour: string) => withBed(bed({ placements: [{ plantId: "tomato", x: 0, y: 0 }, { plantId: neighbour, x: 1, y: 0 }] }));
+
+    it("warns in the analysis panel when a neighbour crowds a plant that needs 2×2 squares", async () => {
+      renderWithAppData(<PlannerPage />, { data: crowded("basil") });
+      const region = await screen.findByRole("region", { name: "Crowding" });
+      expect(within(region).getByText("Tomato needs about 2×2 squares — Basil at row 1, col 2 is crowding it")).toBeInTheDocument();
+    });
+
+    it("shows no crowding section when plants have room", async () => {
+      renderWithAppData(<PlannerPage />, { data: withBed(bed({ placements: [{ plantId: "tomato", x: 0, y: 0 }, { plantId: "basil", x: 2, y: 1 }] })) });
+      await screen.findByRole("region", { name: "Conflicts" });
+      expect(screen.queryByRole("region", { name: "Crowding" })).not.toBeInTheDocument();
+    });
+
+    it("marks the crowded cell amber and says so in its name", async () => {
+      renderWithAppData(<PlannerPage />, { data: crowded("basil") });
+      const cell = await screen.findByRole("button", { name: "Row 1, column 1: Tomato — good companions nearby, crowded" });
+      expect(cell.className).toContain("border-warning");
+      // Basil only needs one square, so it is not crowded itself.
+      expect(screen.getByRole("button", { name: "Row 1, column 2: Basil — good companions nearby" })).toBeInTheDocument();
+    });
+  });
+
+  it("includes the companion status in each cell's accessible name", async () => {
+    renderWithAppData(<PlannerPage />, {
+      data: withBed(bed({ columns: 6, rows: 3, placements: [
+        { plantId: "tomato", x: 0, y: 0 },
+        { plantId: "fennel", x: 1, y: 0 },
+        { plantId: "basil", x: 5, y: 2 },
+        { plantId: "fern", x: 3, y: 2 },
+        { plantId: "tomato", x: 3, y: 0 },
+        { plantId: "basil", x: 4, y: 1 },
+      ] })),
+    });
+    expect(await screen.findByRole("button", { name: /^Row 1, column 2: Fennel — next to a plant it should be kept apart from$/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Row 1, column 4: Tomato — good companions nearby, crowded" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Row 3, column 4: Fern" })).toBeInTheDocument();
+  });
+
+  it("never skips a heading level", async () => {
+    renderWithAppData(<PlannerPage />, { data: withBed(bed({ placements: [{ plantId: "tomato", x: 0, y: 0 }] })) });
+    await screen.findByRole("group", { name: /Main bed layout/ });
+    const levels = screen.getAllByRole("heading").map((h) => Number(h.tagName.slice(1)));
+    expect(levels[0]).toBe(1);
+    levels.slice(1).forEach((level, i) => expect(level).toBeLessThanOrEqual(levels[i] + 1));
+    expect(screen.getByRole("heading", { name: "Plant palette", level: 3 })).toBeInTheDocument();
   });
 
   it("warns when the plant's sun does not suit the bed", async () => {

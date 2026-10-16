@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { careContextFor, completeTask, fertilizeIntervalDays, getCareTasks, lastLogDate, wateringIntervalDays } from "./care";
+import { careContextFor, completeReminder, completeTask, fertilizeIntervalDays, getCareTasks, lastLogDate, wateringIntervalDays } from "./care";
 import { createPlantCatalog } from "./catalog";
 import { makeBed, makeGarden, makePlant, makePlanting, makeProfile } from "@/test/fixtures";
-import type { CareLogEntry, CareTask, Plant } from "./types";
+import type { CareLogEntry, CareTask, Plant, Reminder } from "./types";
 
 const outdoor = { setting: "outdoor" as const, inContainer: false };
 
@@ -282,6 +282,22 @@ describe("completeTask", () => {
   it("does not create a log for reminders", () => {
     const task: CareTask = { ...base, id: "reminder:r1", type: "custom", reminderId: "r1" };
     expect(completeTask(task, "2025-05-05", "x").log).toBeUndefined();
+  });
+});
+
+describe("completeReminder", () => {
+  const reminder: Reminder = { id: "r1", title: "Turn compost", dueDate: "2025-05-04", done: false };
+
+  it("marks a one-off reminder done", () => {
+    expect(completeReminder(reminder, "2025-05-05")).toEqual({ done: true });
+  });
+
+  it("reschedules a repeating reminder instead of finishing it", () => {
+    expect(completeReminder({ ...reminder, repeatDays: 7 }, "2025-05-04")).toEqual({ dueDate: "2025-05-11" });
+  });
+
+  it("rolls a late repeating reminder past the completion date", () => {
+    expect(completeReminder({ ...reminder, repeatDays: 7 }, "2025-05-20")).toEqual({ dueDate: "2025-05-25" });
   });
 });
 

@@ -87,7 +87,7 @@ function JournalItem({ garden, entry }: { garden: Garden; entry: JournalEntry })
   return (
     <li className="flex flex-col gap-2 py-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h4 className="font-semibold">{entry.title}</h4>
+        <h3 className="font-semibold">{entry.title}</h3>
         <div className="flex items-center gap-2">
           <Badge>{formatDisplayDate(entry.date, { year: true })}</Badge>
           <Button size="sm" variant="secondary" aria-label={`Edit ${entry.title}`} onClick={() => setEditing(true)}>
@@ -119,7 +119,7 @@ export function JournalTab({ garden }: { garden: Garden }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <Card title="New journal entry" headingLevel="h3">
+      <Card title="New journal entry">
         <JournalForm
           key={formKey}
           garden={garden}
@@ -131,7 +131,7 @@ export function JournalTab({ garden }: { garden: Garden }) {
           }}
         />
       </Card>
-      <Card title="Journal" headingLevel="h3">
+      <Card title="Journal">
         {entries.length === 0 ? (
           <p className="text-sm text-muted">No journal entries yet. Jot down what you notice in the garden.</p>
         ) : (

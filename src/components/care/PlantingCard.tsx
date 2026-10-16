@@ -49,9 +49,9 @@ export function PlantingCard({ garden, planting, plant, today }: PlantingCardPro
     <li className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <h3 className="font-semibold">
+          <h2 className="font-semibold">
             <PlantLink plantId={planting.plantId} />
-          </h3>
+          </h2>
           <p className="text-sm text-muted">{bed ? `Bed: ${bed.name}` : "Not placed in a bed"}</p>
         </div>
         <div className="flex flex-wrap gap-2">

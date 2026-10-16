@@ -11,6 +11,7 @@ import {
   eventDescription,
   eventRangeLabel,
   frostMarkers,
+  barLabelFits,
   monthColumns,
   timingLabel,
 } from "./timeline";
@@ -136,8 +137,21 @@ describe("frostMarkers", () => {
     expect(m.firstFrost).toMatchObject({ date: "2026-10-15" });
   });
 
+  it("clamps a Feb 29 frost date in a non-leap year instead of throwing", () => {
+    const m = frostMarkers(climate("02-29", "10-15"), 2027);
+    expect(m.lastFrost).toMatchObject({ date: "2027-02-28" });
+    expect(frostMarkers(climate("02-29", null), 2028).lastFrost).toMatchObject({ date: "2028-02-29" });
+  });
+
   it("flags frost-free climates", () => {
     expect(frostMarkers(climate(null, null), 2026)).toEqual({ frostFree: true });
+  });
+});
+
+describe("barLabelFits", () => {
+  it("shows the type label only in bars wide enough to hold it", () => {
+    expect(barLabelFits(3)).toBe(false);
+    expect(barLabelFits(20)).toBe(true);
   });
 });
 

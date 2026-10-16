@@ -2,7 +2,7 @@
  * Pure helpers for the bed planner: palette grouping, labels, warnings and
  * bed-form parsing. No React; companion/density rules stay in `@/domain`.
  */
-import { plantsPerCell } from "@/domain/companions";
+import { footprintSpan, plantsPerCell, type CellStatus, type CrowdingIssue } from "@/domain/companions";
 import type { NewBedInput } from "@/domain/defaults";
 import type { Bed, BedKind, CompanionPair, GardenSetting, Plant, PlantCatalog, SunExposure } from "@/domain/types";
 import { SUN_LABELS } from "@/lib/labels";
@@ -56,9 +56,29 @@ export function buildPalette({ allPlants, gardenPlantIds, recommended, query }: 
 
 // --- labels ----------------------------------------------------------------
 
+export interface CellState {
+  status?: CellStatus;
+  /** A multi-square plant with another plant inside its footprint. */
+  crowded?: boolean;
+}
+
+const CELL_STATUS_TEXT: Record<CellStatus, string | null> = {
+  good: "good companions nearby",
+  bad: "next to a plant it should be kept apart from",
+  neutral: null,
+};
+
+/** What is notable about an occupied cell (colour is not the only cue), or null when nothing is. */
+export function cellStatusText(status: CellStatus, crowded: boolean): string | null {
+  const parts = [CELL_STATUS_TEXT[status], crowded ? "crowded" : null].filter((p): p is string => p !== null);
+  return parts.length > 0 ? parts.join(", ") : null;
+}
+
 /** Accessible name for a grid cell; coordinates are 0-based in, 1-based out. */
-export function cellLabel(x: number, y: number, plant?: Pick<Plant, "name">): string {
-  return `Row ${y + 1}, column ${x + 1}: ${plant ? plant.name : "empty"}`;
+export function cellLabel(x: number, y: number, plant?: Pick<Plant, "name">, state: CellState = {}): string {
+  const base = `Row ${y + 1}, column ${x + 1}: ${plant ? plant.name : "empty"}`;
+  const status = plant ? cellStatusText(state.status ?? "neutral", state.crowded ?? false) : null;
+  return status ? `${base} — ${status}` : base;
 }
 
 /** Name trimmed to `max` characters (with an ellipsis) for tight grid cells. */
@@ -92,14 +112,23 @@ export function conflictWarning(
   return `${plant.name} conflicts with ${names.join(", ")} next to it`;
 }
 
-/** "4 per square" or "needs 2×2 squares". */
+const squares = (span: number) => `${span}×${span} squares`;
+
+/** "4 per square" or "Spreads over about 2×2 squares — keep neighbouring squares free". */
 export function densityHint(plant: Plant, cellSizeInches: number): string {
-  const { perCell, cellsNeeded } = plantsPerCell(plant, cellSizeInches);
-  if (cellsNeeded > 1) {
-    const span = Math.round(Math.sqrt(cellsNeeded));
-    return `needs ${span}×${span} squares`;
-  }
-  return `${perCell} per square`;
+  const span = footprintSpan(plant, cellSizeInches);
+  if (span > 1) return `Spreads over about ${squares(span)} — keep neighbouring squares free`;
+  return `${plantsPerCell(plant, cellSizeInches).perCell} per square`;
+}
+
+/** "Tomato needs about 2×2 squares — Basil at row 1, col 2 is crowding it". */
+export function describeCrowding(issue: CrowdingIssue, catalog: PlantCatalog, cellSizeInches: number): string {
+  const plant = catalog.get(issue.plantId);
+  const name = plant?.name ?? issue.plantId;
+  const needs = plant ? ` needs about ${squares(footprintSpan(plant, cellSizeInches))}` : " needs more room";
+  const who = issue.neighbours.map((n) => `${catalog.get(n.plantId)?.name ?? n.plantId} at row ${n.y + 1}, col ${n.x + 1}`);
+  const list = who.length > 1 ? `${who.slice(0, -1).join(", ")} and ${who[who.length - 1]}` : who[0];
+  return `${name}${needs} — ${list} ${who.length > 1 ? "are" : "is"} crowding it`;
 }
 
 // --- analysis --------------------------------------------------------------

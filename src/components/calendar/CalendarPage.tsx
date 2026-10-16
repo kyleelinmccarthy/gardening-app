@@ -1,18 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Card, Checkbox, ChipGroup, GardenGate, PageHeader, Select, Tabs, type ChipOption } from "@/components/ui";
+import { Card, Checkbox, ChipGroup, GardenGate, PageHeader, Select, Tabs } from "@/components/ui";
 import { buildPlantingCalendar, upcomingEvents } from "@/domain/calendar";
 import { todayIso } from "@/domain/dates";
-import { recommendPlants } from "@/domain/recommendation";
 import type { Garden } from "@/domain/types";
 import { useAppData } from "@/state/AppDataProvider";
 import { MonthList, UpcomingList } from "./EventLists";
 import { TimelineView } from "./TimelineView";
-import { applyChipChange, resolveSelection } from "./plantSelection";
-import { defaultCalendarPlantIds } from "./timeline";
+import { useCalendarSelection } from "./useCalendarSelection";
 
-const RECOMMENDATION_LIMIT = 15;
 const UPCOMING_DAYS = 30;
 
 function Calendar({ garden }: { garden: Garden }) {
@@ -21,47 +18,16 @@ function Calendar({ garden }: { garden: Garden }) {
   const thisYear = Number(today.slice(0, 4));
 
   const [year, setYear] = useState(thisYear);
-  const gardenIds = useMemo(
-    () => defaultCalendarPlantIds(garden).filter((id) => catalog.get(id)),
-    [garden, catalog],
-  );
-  const recommendedIds = useMemo(
-    () => recommendPlants(catalog.all(), garden.profile, { limit: RECOMMENDATION_LIMIT }).map((r) => r.plant.id),
-    [catalog, garden.profile],
-  );
-  const [includeRecommended, setIncludeRecommended] = useState(gardenIds.length === 0);
-  const [overrides, setOverrides] = useState<Record<string, boolean>>({});
-  const [extraIds, setExtraIds] = useState<string[]>([]);
-
-  const pool = useMemo(() => [...new Set([...gardenIds, ...recommendedIds, ...extraIds])], [gardenIds, recommendedIds, extraIds]);
-  const defaults = useMemo(
-    () => new Set([...gardenIds, ...(includeRecommended ? recommendedIds : [])]),
-    [gardenIds, recommendedIds, includeRecommended],
-  );
-  const selectedIds = useMemo(() => resolveSelection(pool, defaults, overrides), [pool, defaults, overrides]);
-  const selectedPlants = useMemo(() => selectedIds.flatMap((id) => catalog.get(id) ?? []), [selectedIds, catalog]);
+  const { selectedIds, selectedPlants, chipOptions, addable, includeRecommended, setIncludeRecommended, changeSelection, addPlant } =
+    useCalendarSelection(garden, catalog);
 
   const climate = garden.profile.climate;
   const events = useMemo(() => buildPlantingCalendar(selectedPlants, climate, year), [selectedPlants, climate, year]);
   const upcoming = useMemo(() => {
-    const both = [thisYear, thisYear + 1].flatMap((y) => buildPlantingCalendar(selectedPlants, climate, y));
+    // Last year's events can still be open (e.g. a harvest running into January).
+    const both = [thisYear - 1, thisYear, thisYear + 1].flatMap((y) => buildPlantingCalendar(selectedPlants, climate, y));
     return upcomingEvents(both, today, UPCOMING_DAYS);
   }, [selectedPlants, climate, thisYear, today]);
-
-  const chipOptions: ChipOption<string>[] = pool.flatMap((id) => {
-    const plant = catalog.get(id);
-    return plant ? [{ value: id, label: plant.name, icon: plant.emoji }] : [];
-  });
-  const addable = catalog
-    .all()
-    .filter((p) => !pool.includes(p.id))
-    .map((p) => ({ value: p.id, label: `${p.emoji} ${p.name}` }));
-
-  function addPlant(id: string) {
-    if (!id) return;
-    setExtraIds((ids) => [...ids, id]);
-    setOverrides((o) => ({ ...o, [id]: true }));
-  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -73,7 +39,7 @@ function Calendar({ garden }: { garden: Garden }) {
               label="Calendar plants"
               options={chipOptions}
               value={selectedIds}
-              onChange={(next) => setOverrides((o) => applyChipChange(o, selectedIds, next))}
+              onChange={changeSelection}
             />
           )}
           <div className="flex flex-wrap items-end gap-4">

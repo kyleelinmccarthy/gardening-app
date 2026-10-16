@@ -28,6 +28,7 @@ export function PlantPalette({ sections, tool, query, onQueryChange, onSelectPla
   const selectedId = tool?.kind === "plant" ? tool.plantId : null;
   return (
     <div className="flex flex-col gap-3">
+      <h3 className="sr-only">Plant palette</h3>
       <Field label="Search plants">
         <TextInput type="search" value={query} onChange={(e) => onQueryChange(e.target.value)} placeholder="Tomato, basil…" />
       </Field>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { analyzeBed, placementConflicts, plantsPerCell, relationBetween, suggestCompanions } from "./companions";
+import { analyzeBed, crowdingIssues, footprintSpan, placementConflicts, plantsPerCell, relationBetween, suggestCompanions } from "./companions";
 import { createPlantCatalog } from "./catalog";
 import { makeBed, makePlant } from "@/test/fixtures";
 
@@ -228,5 +228,63 @@ describe("placementConflicts", () => {
       ],
     });
     expect(placementConflicts(crowded, "tomato", 1, 0, catalog)).toHaveLength(1);
+  });
+});
+
+describe("footprintSpan", () => {
+  it("is the side, in cells, of the square block a plant needs", () => {
+    expect(footprintSpan(makePlant({ spacingInches: 6 }), 12)).toBe(1);
+    expect(footprintSpan(makePlant({ spacingInches: 12 }), 12)).toBe(1);
+    expect(footprintSpan(makePlant({ spacingInches: 24 }), 12)).toBe(2);
+    expect(footprintSpan(makePlant({ spacingInches: 30 }), 12)).toBe(3);
+  });
+});
+
+describe("crowdingIssues", () => {
+  const big = makePlant({ id: "squash", name: "Squash", spacingInches: 24 }); // needs 2x2 in 12" cells
+  const huge = makePlant({ id: "pumpkin", name: "Pumpkin", spacingInches: 36 }); // needs 3x3
+  const small = makePlant({ id: "radish", name: "Radish", spacingInches: 3 });
+  const cat = createPlantCatalog([big, huge, small]);
+  const bedWith = (...placements: [string, number, number][]) =>
+    makeBed({ columns: 6, rows: 6, placements: placements.map(([plantId, x, y]) => ({ plantId, x, y })) });
+
+  it("reports nothing for an empty bed or a lone large plant", () => {
+    expect(crowdingIssues(makeBed(), cat)).toEqual([]);
+    expect(crowdingIssues(bedWith(["squash", 1, 1]), cat)).toEqual([]);
+  });
+
+  it("flags a 2x2 plant with any other plant in an adjacent square", () => {
+    const issues = crowdingIssues(bedWith(["squash", 1, 1], ["radish", 2, 2]), cat);
+    expect(issues).toEqual([{ plantId: "squash", x: 1, y: 1, neighbours: [{ plantId: "radish", x: 2, y: 2 }] }]);
+  });
+
+  it("does not flag the small plant itself (it needs only one square)", () => {
+    const issues = crowdingIssues(bedWith(["squash", 1, 1], ["radish", 2, 1]), cat);
+    expect(issues.map((i) => i.plantId)).toEqual(["squash"]);
+  });
+
+  it("allows neighbours exactly the footprint away", () => {
+    expect(crowdingIssues(bedWith(["squash", 0, 0], ["radish", 2, 0]), cat)).toEqual([]);
+    expect(crowdingIssues(bedWith(["squash", 0, 0], ["radish", 2, 2]), cat)).toEqual([]);
+  });
+
+  it("reaches (n-1) cells for larger footprints", () => {
+    expect(crowdingIssues(bedWith(["pumpkin", 0, 0], ["radish", 2, 0]), cat)).toHaveLength(1);
+    expect(crowdingIssues(bedWith(["pumpkin", 0, 0], ["radish", 3, 0]), cat)).toEqual([]);
+  });
+
+  it("flags two large plants side by side and lists neighbours in reading order", () => {
+    const issues = crowdingIssues(bedWith(["squash", 1, 1], ["squash", 2, 1], ["radish", 0, 0], ["radish", 1, 0]), cat);
+    expect(issues).toHaveLength(2);
+    expect(issues[0]).toMatchObject({ plantId: "squash", x: 1, y: 1 });
+    expect(issues[0].neighbours).toEqual([
+      { plantId: "radish", x: 0, y: 0 },
+      { plantId: "radish", x: 1, y: 0 },
+      { plantId: "squash", x: 2, y: 1 },
+    ]);
+  });
+
+  it("ignores plants missing from the catalog as the crowded plant", () => {
+    expect(crowdingIssues(bedWith(["mystery", 0, 0], ["radish", 1, 0]), cat)).toEqual([]);
   });
 });

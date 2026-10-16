@@ -5,14 +5,13 @@ import { eventsInMonth } from "@/domain/calendar";
 import { MONTH_NAMES_LONG } from "@/domain/dates";
 import type { CalendarEvent } from "@/domain/types";
 import { CALENDAR_EVENT_LABELS } from "@/lib/labels";
-import { cn } from "@/lib/cn";
-import { EVENT_BAR_CLASSES } from "./event-styles";
+import { EventSwatch } from "./EventSwatch";
 import { eventRangeLabel, timingLabel } from "./timeline";
 
 function EventItem({ event, extra }: { event: CalendarEvent; extra?: string }) {
   return (
     <li className="flex flex-wrap items-center gap-x-3 gap-y-1 py-1.5 text-sm">
-      <span aria-hidden="true" className={cn("inline-block h-3 w-3 shrink-0 rounded-sm", EVENT_BAR_CLASSES[event.type])} />
+      <EventSwatch type={event.type} aria-hidden="true" className="inline-block h-3 w-3 shrink-0" />
       <PlantLink plantId={event.plantId} />
       <span className="font-medium">{CALENDAR_EVENT_LABELS[event.type]}</span>
       <span className="text-muted">{eventRangeLabel(event)}</span>

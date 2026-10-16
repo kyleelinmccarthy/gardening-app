@@ -68,11 +68,11 @@ export function CareLogTab({ garden }: { garden: Garden }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <Card title="Add a log entry" description="Record care you did outside of the task list." headingLevel="h3">
+      <Card title="Add a log entry" description="Record care you did outside of the task list.">
         <AddLogForm garden={garden} />
       </Card>
 
-      <Card title="History" headingLevel="h3">
+      <Card title="History">
         <div className="mb-4 grid gap-3 sm:grid-cols-2">
           <Field label="Filter by plant">
             <Select
