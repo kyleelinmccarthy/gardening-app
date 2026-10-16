@@ -1,14 +1,6 @@
 import { addDays, addWeeks, monthDayToIso, toIsoDate } from "./dates";
 import type { CalendarEvent, CalendarEventType, ClimateProfile, Plant } from "./types";
 
-export const CALENDAR_EVENT_LABELS: Record<CalendarEventType, string> = {
-  "start-indoors": "Start indoors",
-  transplant: "Transplant",
-  "direct-sow": "Direct sow",
-  "fall-sow": "Fall sow",
-  harvest: "Harvest",
-};
-
 /**
  * Frost-free climates (no frost dates) are approximated with a nominal last
  * frost of Feb 1 and first frost of Dec 1 so that planting windows still

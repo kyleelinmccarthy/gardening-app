@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   buildPlantingCalendar,
-  CALENDAR_EVENT_LABELS,
   eventsInMonth,
   upcomingEvents,
 } from "./calendar";
@@ -180,11 +179,3 @@ describe("upcomingEvents", () => {
   });
 });
 
-describe("CALENDAR_EVENT_LABELS", () => {
-  it("has a label for every event type", () => {
-    expect(Object.keys(CALENDAR_EVENT_LABELS).sort()).toEqual(
-      ["direct-sow", "fall-sow", "harvest", "start-indoors", "transplant"].sort(),
-    );
-    expect(CALENDAR_EVENT_LABELS["start-indoors"]).toBe("Start indoors");
-  });
-});
